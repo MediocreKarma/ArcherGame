@@ -1,0 +1,219 @@
+using Gamekit2D;
+using System;
+using System.Collections;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using static UnityEngine.UI.Image;
+
+public class Player : MonoBehaviour
+{
+    private float horizontalMovement;
+    public float horizontalSpeed = 20f;
+
+    public float jumpingPower = 20f;
+
+    public float dashCooldown = 2f;
+    private float timeSinceLastDash = 2f;
+    public bool canDash = true;
+
+    public float groundedForgiveness = 0.075f;
+    private float timeSinceLastGrounded = 0.075f;
+
+    private bool isFacingRight = true;
+
+    private bool isDropping = false;
+    private bool enableMovement = true;
+
+    private LayerMask platformLayer;
+    [SerializeField] private LayerMask groundLayer = -1;
+    [SerializeField] private Bow bow;
+
+    private Rigidbody2D rb;
+    private Collider2D triggerCollider;
+    private Collider2D groundCollider;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        triggerCollider = GetComponent<CompositeCollider2D>();
+        groundCollider = transform.GetChild(0).GetComponent<Collider2D>();
+        if (groundLayer == -1)
+        {
+            groundLayer = LayerMask.GetMask("Ground");
+        }
+        platformLayer = LayerMask.GetMask("Platform");
+    }
+
+    private void Update()
+    {
+        bool isGrounded = IsGrounded();
+        TryRotateSprite();
+        if (!canDash && isGrounded)
+        {
+            canDash = true;
+        }
+        if (timeSinceLastDash < dashCooldown)
+        {
+            timeSinceLastDash += Time.deltaTime;
+        }
+        if (isGrounded)
+        {
+            timeSinceLastGrounded = 0;
+        }
+        else if (timeSinceLastGrounded < groundedForgiveness)
+        {
+            timeSinceLastGrounded += Time.deltaTime;
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (enableMovement)
+        {
+            rb.linearVelocityX = horizontalMovement * horizontalSpeed;
+        }
+    }
+
+    public bool IsFacingRight()
+    {
+        return isFacingRight;
+    }
+
+    public void HorizontalMovement(InputAction.CallbackContext context)
+    {
+        horizontalMovement = context.ReadValue<Vector2>()[0];
+    }
+
+    private void Look()
+    {
+        Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+        bow.AimTowards(mousePosition);
+    }
+
+    public void LookCallback(InputAction.CallbackContext _)
+    {
+        Look();
+    }
+
+    public void ChargeBow(InputAction.CallbackContext context)
+    {
+        if (context.performed)
+        {
+            bow.StartCharging();
+        }
+        else if (context.canceled)
+        {
+            bow.ReleaseCharge();
+        }
+    }
+
+    public void RetrieveArrow(InputAction.CallbackContext context)
+    {
+        if (context.performed)
+        {
+            bow.RetrieveArrow();
+        }
+    }
+
+    public void DropThroughPlatform(InputAction.CallbackContext context)
+    { 
+        if (context.performed && !isDropping && IsGrounded())
+        {
+            Bounds bounds = GetComponent<Collider2D>().bounds;
+            float rayLength = 0.2f;
+
+            Vector2 leftOrigin = new(bounds.min.x, bounds.min.y);
+            Vector2 rightOrigin = new(bounds.max.x, bounds.min.y);
+
+            RaycastHit2D leftHit = Physics2D.Raycast(leftOrigin, Vector2.down, rayLength, platformLayer);
+            RaycastHit2D rightHit = Physics2D.Raycast(rightOrigin, Vector2.down, rayLength, platformLayer);
+
+            if (leftHit.collider != null &&
+                rightHit.collider != null &&
+                leftHit.collider == rightHit.collider)
+            {
+                StartCoroutine(DisablePlatformCollider(leftHit.collider, 0.3f));
+            }
+        }
+    }
+
+    private IEnumerator DisablePlatformCollider(Collider2D collider, float seconds)
+    {
+        isDropping = true;
+        collider.enabled = false;
+
+        rb.AddForce(Vector2.down * 1f, ForceMode2D.Impulse);
+        yield return new WaitForSeconds(seconds);
+        collider.enabled = true;
+        isDropping = false;
+    }
+
+    public void Dash(InputAction.CallbackContext context)
+    {
+        if (context.performed && timeSinceLastDash >= dashCooldown && canDash)
+        {
+            canDash = false;
+            enableMovement = false;
+            var dir = isFacingRight ? Vector2.left : Vector2.right;
+            timeSinceLastDash = 0;
+            rb.AddForce(dir * 40f, ForceMode2D.Impulse);
+            StartCoroutine(DashIFrames(0.1f));
+        }
+    }
+
+    private IEnumerator DashIFrames(float seconds)
+    {
+        triggerCollider.excludeLayers = LayerMask.GetMask("Everything");
+        yield return new WaitForSeconds(seconds);
+        triggerCollider.excludeLayers = LayerMask.GetMask("Player");
+        enableMovement = true;
+    }
+
+    private void TryRotateSprite()
+    {
+        if ((isFacingRight && horizontalMovement > 0f) || (!isFacingRight && horizontalMovement < 0f))
+        {
+            isFacingRight = !isFacingRight;
+            Vector3 localScale = transform.localScale;
+            localScale.x *= -1f;
+            transform.localScale = localScale;
+            bow.RotateSprite();
+            Look();
+        }
+    }
+
+    private bool IsGrounded()
+    {
+        RaycastHit2D hit = Physics2D.BoxCast(
+            groundCollider.bounds.center, 
+            groundCollider.bounds.size, 
+            0f, 
+            Vector2.down, 
+            0.05f, 
+            LayerMask.GetMask("Level", "Platform")
+        );
+        return hit.collider != null;
+    }
+
+    public void Jump(InputAction.CallbackContext context)
+    {
+        if (context.performed && timeSinceLastGrounded < groundedForgiveness)
+        {
+            timeSinceLastGrounded = groundedForgiveness;
+            rb.linearVelocityY = jumpingPower;
+        }
+    }
+
+    //private bool SlopeCheck()
+    //{
+    //}
+
+    //private void SlopeCheckHorizontal(Vector2 origin)
+    //{
+
+    //}
+
+    //private void SlopeCheckVertical(Vector2 origin)
+    //{
+    //}
+}
