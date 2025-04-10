@@ -135,7 +135,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &4777368
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -239,6 +239,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d8e0077c34abc74b93c30560df6ff82, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  attackDamage: 1
   speed: 5
   hitpoints: 2
   isAlive: 1
@@ -371,6 +372,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad5ab0edadf898f449844e2c588c8e40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  health: 100
   horizontalSpeed: 15
   jumpingPower: 24
   dashCooldown: 1
@@ -1234,7 +1236,7 @@ Transform:
   m_GameObject: {fileID: 138651751}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 22, y: -13, z: 0}
+  m_LocalPosition: {x: 24, y: 5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1253,7 +1255,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 14df8ea297fc7af4a9c65b6aa2195f84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 0
+  attackDamage: 1
+  speed: 5
   hitpoints: 1
   isAlive: 1
   pathingAlgorithm: {fileID: 1861689845}
@@ -5425,7 +5428,7 @@ BoxCollider2D:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 512
   m_LayerOverridePriority: 0
   m_ForceSendLayers:
     serializedVersion: 2

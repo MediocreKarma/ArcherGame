@@ -7,6 +7,7 @@ using static UnityEngine.UI.Image;
 
 public class Player : MonoBehaviour
 {
+    public float health = 100f;
     private float horizontalMovement;
     public float horizontalSpeed = 20f;
 
@@ -23,6 +24,12 @@ public class Player : MonoBehaviour
 
     private bool isDropping = false;
     private bool enableMovement = true;
+
+    private bool isInvulnerable = false;
+    private readonly float knockbackForce = 20f;
+
+    public float slowMoSeconds = 1.7f;
+    public float damageIFramesSeconds = 2f;
 
     private LayerMask platformLayer;
     [SerializeField] private LayerMask groundLayer = -1;
@@ -163,9 +170,11 @@ public class Player : MonoBehaviour
 
     private IEnumerator DashIFrames(float seconds)
     {
+        isInvulnerable = true;
         triggerCollider.excludeLayers = LayerMask.GetMask("Everything");
         yield return new WaitForSeconds(seconds);
         triggerCollider.excludeLayers = LayerMask.GetMask("Player");
+        isInvulnerable = false;
         enableMovement = true;
     }
 
@@ -202,6 +211,51 @@ public class Player : MonoBehaviour
             timeSinceLastGrounded = groundedForgiveness;
             rb.linearVelocityY = jumpingPower;
         }
+    }
+
+    public void TakeDamage(float damage, Vector2 direction)
+    {
+        if (isInvulnerable) return;
+
+        // health -= damage;
+        Debug.Log($"Player took {damage} damage! Health: {health}");
+
+        Debug.Log("Direction " + direction);
+        // Apply knockback
+        Vector2 knockbackDirection = (direction.normalized + Vector2.up * 0.2f).normalized;
+
+        // Start invulnerability frames
+        StartCoroutine(SlowMoPushBack(knockbackDirection.normalized * knockbackForce, slowMoSeconds));
+        StartCoroutine(DamageIFrames(damageIFramesSeconds));
+    }
+
+    private IEnumerator DamageIFrames(float seconds)
+    {
+        isInvulnerable = true; 
+        triggerCollider.excludeLayers = LayerMask.GetMask("Everything");
+        yield return new WaitForSecondsRealtime(seconds);
+        triggerCollider.excludeLayers = LayerMask.GetMask("Player");
+        isInvulnerable = false;
+    }
+
+    private IEnumerator SlowMoPushBack(Vector2 force, float seconds)
+    {
+        enableMovement = false;
+        rb.linearVelocity = Vector2.zero;
+        rb.AddForce(force, ForceMode2D.Impulse);
+        Time.timeScale = 0.2f;
+        Time.fixedDeltaTime = 0.02f * Time.timeScale;
+
+        yield return new WaitForSecondsRealtime(seconds);
+
+        Time.timeScale = 1f;
+        Time.fixedDeltaTime = 0.02f;
+        enableMovement = true;
+    }
+
+    public bool IsInvulnerable()
+    {
+        return isInvulnerable;
     }
 
     //private bool SlopeCheck()

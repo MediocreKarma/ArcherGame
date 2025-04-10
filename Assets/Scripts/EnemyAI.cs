@@ -5,8 +5,10 @@ using UnityEngine;
 public class EnemyAI : MonoBehaviour
 {
     protected Transform player;
+    protected Player playerObject;
     protected Rigidbody2D rb;
 
+    public float attackDamage = 1f;
     public float speed = 5f;
     public int hitpoints = 1;
     public bool isAlive = true;
@@ -22,6 +24,7 @@ public class EnemyAI : MonoBehaviour
     protected virtual void Start()
     {
         player = GameObject.Find("Player").transform;
+        playerObject = player.GetComponent<Player>();
         rb = GetComponent<Rigidbody2D>();
         arrowSticking = FindFirstObjectByType<ArrowSticking>();
     }
@@ -50,6 +53,16 @@ public class EnemyAI : MonoBehaviour
             {
                 Stagger(collision);
             }
+        }
+    }
+
+    protected void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            bool hitFromLeft = transform.position.x < collision.transform.position.x;
+            Vector2 hitDirection = hitFromLeft ? Vector2.right : Vector2.left;
+            playerObject.TakeDamage(attackDamage, hitDirection);
         }
     }
 

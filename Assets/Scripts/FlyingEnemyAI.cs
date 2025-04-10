@@ -14,7 +14,7 @@ public class FlyingEnemyAI : EnemyAI
     {
         base.Start();
         rb.excludeLayers |= LayerMask.GetMask("Platform");
-        collider = GetComponent<CircleCollider2D>();
+        collider = GetComponentInChildren<CircleCollider2D>();
     }
 
     new void Update()
