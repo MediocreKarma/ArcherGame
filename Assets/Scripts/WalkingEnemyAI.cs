@@ -15,7 +15,7 @@ public class WalkingEnemyAI : EnemyAI
         {
             return;
         }
-        if (!enableMovement)
+        if (!enableMovement && isAggressive)
         {
             return;
         }

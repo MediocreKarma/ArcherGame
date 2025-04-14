@@ -5,9 +5,11 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using static UnityEngine.UI.Image;
 
+[System.Serializable]
 public class Player : MonoBehaviour
 {
     public float health = 100f;
+    public float MaxHealth { get; private set; }
     private float horizontalMovement;
     public float horizontalSpeed = 20f;
 
@@ -15,7 +17,7 @@ public class Player : MonoBehaviour
 
     public float dashCooldown = 2f;
     private float timeSinceLastDash = 2f;
-    public bool canDash = true;
+    private bool canDash = true;
 
     public float groundedForgiveness = 0.075f;
     private float timeSinceLastGrounded = 0.075f;
@@ -31,6 +33,8 @@ public class Player : MonoBehaviour
     public float slowMoSeconds = 1.7f;
     public float damageIFramesSeconds = 2f;
 
+    public bool IsDead { get; private set; } = false;
+
     private LayerMask platformLayer;
     [SerializeField] private LayerMask groundLayer = -1;
     [SerializeField] private Bow bow;
@@ -38,6 +42,8 @@ public class Player : MonoBehaviour
     private Rigidbody2D rb;
     private Collider2D triggerCollider;
     private Collider2D groundCollider;
+
+    public Interactable CurrentInteractable { get; set; }
 
     void Start()
     {
@@ -49,6 +55,7 @@ public class Player : MonoBehaviour
             groundLayer = LayerMask.GetMask("Ground");
         }
         platformLayer = LayerMask.GetMask("Platform");
+        MaxHealth = health;
     }
 
     private void Update()
@@ -75,6 +82,7 @@ public class Player : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (IsDead) return;
         if (enableMovement)
         {
             rb.linearVelocityX = horizontalMovement * horizontalSpeed;
@@ -88,6 +96,7 @@ public class Player : MonoBehaviour
 
     public void HorizontalMovement(InputAction.CallbackContext context)
     {
+        if (IsDead) return;
         horizontalMovement = context.ReadValue<Vector2>()[0];
     }
 
@@ -99,11 +108,13 @@ public class Player : MonoBehaviour
 
     public void LookCallback(InputAction.CallbackContext _)
     {
+        if (IsDead) return;
         Look();
     }
 
     public void ChargeBow(InputAction.CallbackContext context)
     {
+        if (IsDead) return;
         if (context.performed)
         {
             bow.StartCharging();
@@ -116,6 +127,7 @@ public class Player : MonoBehaviour
 
     public void RetrieveArrow(InputAction.CallbackContext context)
     {
+        if (IsDead) return;
         if (context.performed)
         {
             bow.RetrieveArrow();
@@ -123,7 +135,8 @@ public class Player : MonoBehaviour
     }
 
     public void DropThroughPlatform(InputAction.CallbackContext context)
-    { 
+    {
+        if (IsDead) return;
         if (context.performed && !isDropping && IsGrounded())
         {
             Bounds bounds = GetComponent<Collider2D>().bounds;
@@ -157,6 +170,7 @@ public class Player : MonoBehaviour
 
     public void Dash(InputAction.CallbackContext context)
     {
+        if (IsDead) return;
         if (context.performed && timeSinceLastDash >= dashCooldown && canDash)
         {
             canDash = false;
@@ -180,6 +194,7 @@ public class Player : MonoBehaviour
 
     private void TryRotateSprite()
     {
+        if (IsDead) return;
         if ((isFacingRight && horizontalMovement > 0f) || (!isFacingRight && horizontalMovement < 0f))
         {
             isFacingRight = !isFacingRight;
@@ -206,6 +221,7 @@ public class Player : MonoBehaviour
 
     public void Jump(InputAction.CallbackContext context)
     {
+        if (IsDead) return;
         if (context.performed && timeSinceLastGrounded < groundedForgiveness)
         {
             timeSinceLastGrounded = groundedForgiveness;
@@ -217,16 +233,35 @@ public class Player : MonoBehaviour
     {
         if (isInvulnerable) return;
 
-        // health -= damage;
-        Debug.Log($"Player took {damage} damage! Health: {health}");
-
-        Debug.Log("Direction " + direction);
-        // Apply knockback
+        health -= damage;
+        if (health <= 0)
+        {
+            Die();
+        }
+        //Debug.Log($"Player took {damage} damage! Health: {health}");
+        //Debug.Log("Direction " + direction);
         Vector2 knockbackDirection = (direction.normalized + Vector2.up * 0.2f).normalized;
 
-        // Start invulnerability frames
         StartCoroutine(SlowMoPushBack(knockbackDirection.normalized * knockbackForce, slowMoSeconds));
         StartCoroutine(DamageIFrames(damageIFramesSeconds));
+    }
+
+    public void Die()
+    {
+        StartCoroutine(DeathCoroutine(5f));
+    }
+
+    private IEnumerator DeathCoroutine(float seconds)
+    {
+        rb.freezeRotation = false;
+        enableMovement = false;
+        IsDead = true;
+        Physics2D.IgnoreCollision(GetComponentInChildren<Collider2D>(), GetComponent<Collider2D>(), true);
+        yield return new WaitForSeconds(seconds);
+        rb.freezeRotation = true;
+        enableMovement = true;
+        IsDead = false;
+        FindFirstObjectByType<SaveManager>().LoadGame();
     }
 
     private IEnumerator DamageIFrames(float seconds)
@@ -256,6 +291,15 @@ public class Player : MonoBehaviour
     public bool IsInvulnerable()
     {
         return isInvulnerable;
+    }
+
+    public void Interact(InputAction.CallbackContext context)
+    {
+        if (IsDead) return;
+        if (context.performed && CurrentInteractable)
+        {
+            CurrentInteractable.Trigger(this);
+        }
     }
 
     //private bool SlopeCheck()

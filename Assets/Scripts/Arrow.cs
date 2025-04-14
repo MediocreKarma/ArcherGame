@@ -1,6 +1,7 @@
 using System.Collections;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 [RequireComponent(typeof(ArrowSticking))]
 public class Arrow : MonoBehaviour
@@ -10,11 +11,11 @@ public class Arrow : MonoBehaviour
     private Rigidbody2D rb;
     private Vector3 originalPosition;
     private Transform bowParent;
+    private Collider2D arrowCollider;
 
     public float retrieveSpeed = 15f;
     private bool isReturning = false;
     private bool isJumping = false;
-    private Collider2D stuckInCollider = null;
     private ArrowSticking sticking;
     private PathingAlgorithm pathing;
 
@@ -50,18 +51,23 @@ public class Arrow : MonoBehaviour
         }
         isReturning = true;
         transform.SetParent(null);
-        sticking.Unstick();
         StartCoroutine(ReturnSequence());
     }
 
     private IEnumerator ReturnSequence()
     {
+        GameObject stuckTo = sticking.StuckTo();
+        sticking.Unstick();
         if (hasHit)
         {
             isInsideWall = !pathing.HasPath(transform.position, bowParent.position);
             hasHit = false;
             isJumping = true;
-            Vector2 jumpDirection = ComputeJumpDirection(isInsideWall);
+            Vector2 jumpDirection = ComputeJumpDirection(
+                isInsideWall &&
+                stuckTo != null &&
+                stuckTo.layer == LayerMask.NameToLayer("Level")
+            );
             rb.simulated = true;
             rb.linearVelocity = jumpDirection * retrieveSpeed;
             yield return new WaitForSeconds(0.1f); // Jumping from the wall takes 0.1 seconds
@@ -91,26 +97,24 @@ public class Arrow : MonoBehaviour
         }
         Debug.Log("Was inside wall!");
 
-        Collider2D[] nearbyColliders = Physics2D.OverlapCircleAll(transform.position, 5f, LayerMask.GetMask("Level"));
-        Collider2D closestCollider = null;
-        float closestDistance = Mathf.Infinity;
-
-        foreach (Collider2D collider in nearbyColliders)
-        {
-            float distance = Vector2.Distance(transform.position, collider.ClosestPoint(transform.position));
-            if (distance < closestDistance)
-            {
-                closestDistance = distance;
-                closestCollider = collider;
-            }
-        }
+        Collider2D[] levelColliders = Physics2D.OverlapCircleAll(transform.position, 1f, LayerMask.GetMask("Level"));
+        Collider2D closestCollider = levelColliders.Length > 0 ? levelColliders[0] : null;
 
         if (closestCollider != null)
         {
             Vector2 closestPoint = closestCollider.ClosestPoint(transform.position);
+            Debug.Log(-((Vector2)transform.position - closestPoint).normalized);
+            StartCoroutine(DisableCollider(closestCollider, 0.1f));
             return -((Vector2)transform.position - closestPoint).normalized;
         }
         return -transform.right;
+    }
+
+    private IEnumerator DisableCollider(Collider2D collider, float seconds)
+    {
+        Physics2D.IgnoreCollision(collider, arrowCollider, true);
+        yield return new WaitForSeconds(seconds);
+        Physics2D.IgnoreCollision(collider, arrowCollider, false);
     }
 
     public void RearmingBow()
@@ -133,12 +137,13 @@ public class Arrow : MonoBehaviour
         bowParent = transform.parent;
         sticking = GetComponent<ArrowSticking>();
         pathing = FindFirstObjectByType<PathingAlgorithm>();
+        arrowCollider = GetComponentInChildren<Collider2D>();
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        Debug.Log("Arrow Hit " + collision.gameObject.name + " at " + Time.frameCount);
-        if ((isJumping && collision.collider == stuckInCollider) || !isLaunched || hasHit)
+        //Debug.Log("Arrow Hit " + collision.gameObject.name + " at " + Time.frameCount);
+        if ((isJumping && collision.gameObject == sticking.StuckTo()) || !isLaunched || hasHit)
         {
             return;
         }
@@ -148,7 +153,6 @@ public class Arrow : MonoBehaviour
         isReturning = false;
         //transform.SetParent(collision.transform);
         //rb.simulated = false;
-        stuckInCollider = collision.collider;
         sticking.StickTo(collision.rigidbody, collision);
     }
 

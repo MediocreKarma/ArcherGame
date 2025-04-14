@@ -3,9 +3,8 @@ using UnityEngine;
 public class ArrowSticking : MonoBehaviour
 {
     private Rigidbody2D rb;
-    private bool isStuck = false;
     private GameObject stuckTo = null;
-    FixedJoint2D joint = null;
+    // FixedJoint2D joint = null;
 
     void Awake()
     {
@@ -33,7 +32,9 @@ public class ArrowSticking : MonoBehaviour
         //// Optional: Disable collision between arrow and enemy if needed
         //// Physics2D.IgnoreCollision(GetComponent<Collider2D>(), 
         ////     targetRb.GetComponent<Collider2D>(), true);
-
+       
+        //Debug.Log("Stick to called at " + Time.frameCount);
+        stuckTo = targetRb.gameObject;
         transform.parent = targetRb.transform;
         rb.simulated = false;
     }
@@ -44,27 +45,14 @@ public class ArrowSticking : MonoBehaviour
         //{
         //    Destroy(joint);
         //}
+        //Debug.Log("Unstick called at " + Time.frameCount);
         transform.parent = null;
         rb.simulated = true;
+        stuckTo = null;
     }
 
-    public GameObject IsStuckTo()
+    public GameObject StuckTo()
     {
         return stuckTo;
-    }
-
-    void OnDestroy()
-    {
-        // Clean up any remaining joints
-        if (TryGetComponent<FixedJoint2D>(out var joint)) Destroy(joint);
-    }
-
-    void FixedUpdate()
-    {
-        if (isStuck && joint != null)
-        {
-            // Force synchronization of rotation
-            rb.MoveRotation(joint.connectedBody.rotation);
-        }
     }
 }

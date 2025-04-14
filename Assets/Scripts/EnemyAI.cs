@@ -1,32 +1,41 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Rendering.UI;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class EnemyAI : MonoBehaviour
 {
-    protected Transform player;
-    protected Player playerObject;
+    protected Transform playerTransform;
+    protected Player player;
     protected Rigidbody2D rb;
 
     public float attackDamage = 1f;
     public float speed = 5f;
     public int hitpoints = 1;
     public bool isAlive = true;
+    public bool isAggressive = false;
     protected bool hasArrowStuck = false;
     protected bool enableMovement = true;
     protected bool hasImmunity = true;
+
+    public int StartHitpoints { get; private set; }
+    public Vector2 StartPosition { get; private set; }
 
     private ArrowSticking arrowSticking;
     private float timeSinceLastHit = 0f;
 
     public PathingAlgorithm pathingAlgorithm;
+    protected string id;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     protected virtual void Start()
     {
-        player = GameObject.Find("Player").transform;
-        playerObject = player.GetComponent<Player>();
+        id = System.Guid.NewGuid().ToString();
+        playerTransform = GameObject.Find("Player").transform;
+        player = playerTransform.GetComponent<Player>();
         rb = GetComponent<Rigidbody2D>();
         arrowSticking = FindFirstObjectByType<ArrowSticking>();
+        StartHitpoints = hitpoints;
+        StartPosition = transform.position;
     }
 
     protected virtual void Update()
@@ -38,9 +47,13 @@ public class EnemyAI : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Arrow"))
         {
-            Debug.Log("EnemyAI Hit by arrow");
+            //Debug.Log("EnemyAI Hit by arrow");
 
             ArrowSticking arrow = collision.gameObject.GetComponent<ArrowSticking>();
+            if (arrow.StuckTo() == gameObject)
+            {
+                return;
+            }
             arrow.StickTo(GetComponent<Rigidbody2D>(), collision);
             hasArrowStuck = true;
             hitpoints--;
@@ -58,11 +71,15 @@ public class EnemyAI : MonoBehaviour
 
     protected void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.gameObject.CompareTag("Player"))
+        if (isAlive && collision.gameObject.CompareTag("Player"))
         {
             bool hitFromLeft = transform.position.x < collision.transform.position.x;
             Vector2 hitDirection = hitFromLeft ? Vector2.right : Vector2.left;
-            playerObject.TakeDamage(attackDamage, hitDirection);
+            player.TakeDamage(attackDamage, hitDirection);
+            if (player.IsDead)
+            {
+                isAggressive = false;
+            }
         }
     }
 
@@ -73,6 +90,7 @@ public class EnemyAI : MonoBehaviour
         rb.freezeRotation = false;
         rb.AddForce(collision.transform.right * 2f, ForceMode2D.Impulse);
         rb.AddTorque(2f, ForceMode2D.Impulse);
+        Physics2D.IgnoreCollision(GetComponentInChildren<Collider2D>(), player.GetComponent<Collider2D>(), true);
         StartCoroutine(DestroySelf(15f));
     }
 
@@ -81,11 +99,6 @@ public class EnemyAI : MonoBehaviour
         rb.AddForce(collision.transform.right * 0.8f, ForceMode2D.Impulse);
         enableMovement = false;
         StartCoroutine(EnableMovement(0.5f));
-    }
-
-    private void OnCollisionExit2D(Collision2D collision)
-    {
-        Debug.Log("EnemyAI exited collision with " + collision.gameObject.name);
     }
 
     private IEnumerator EnableMovement(float seconds)
@@ -97,19 +110,19 @@ public class EnemyAI : MonoBehaviour
     private IEnumerator DestroySelf(float seconds, float keepAliveSeconds = 3)
     {
         yield return new WaitForSeconds(seconds);
-        while (timeSinceLastHit < keepAliveSeconds)
+        while (timeSinceLastHit < keepAliveSeconds || arrowSticking.StuckTo() == gameObject)
         {
+            if (timeSinceLastHit >= keepAliveSeconds)
+            {
+                timeSinceLastHit = 0f;
+            }
             yield return new WaitForSeconds(keepAliveSeconds - timeSinceLastHit);
         }
-        if (arrowSticking.IsStuckTo() == gameObject)
-        {
-            arrowSticking.Unstick();
-        }
-        Destroy(gameObject);
+        gameObject.SetActive(false);
     }
 
     protected Vector2 GetTargetPosition()
     {
-        return player.position;
+        return playerTransform.position;
     }
 }

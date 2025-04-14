@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class FlyingEnemyAI : EnemyAI
 {
@@ -9,6 +10,7 @@ public class FlyingEnemyAI : EnemyAI
 
     private float pathTimer = 0f;
     private const float pathInterval = 0.333f;
+    public float aggroDistance = 10f;
 
     private new void Start()
     {
@@ -17,7 +19,7 @@ public class FlyingEnemyAI : EnemyAI
         collider = GetComponentInChildren<CircleCollider2D>();
     }
 
-    new void Update()
+    private new void Update()
     {
         base.Update();
         if (!isAlive)
@@ -29,24 +31,51 @@ public class FlyingEnemyAI : EnemyAI
         {
             return;
         }
+        UpdatePath();
+        UpdateAggro();
+    }
+
+    private void UpdatePath()
+    {
         pathTimer -= Time.deltaTime;
-
-        if (pathTimer <= 0f)
+        if (pathTimer > 0f)
         {
-            pathTimer = pathInterval;
-
-            Vector2 start = rb.position;
+            return;
+        }
+        pathTimer = pathInterval;
+        List<Vector2> newPath;
+        Vector2 start = rb.position;
+        if (isAggressive)
+        {
             Vector2 goal = GetTargetPosition();
-            var newPath = pathingAlgorithm.ShortestPath(start, goal);
-            if (newPath != null)
-            {
-                currentPath = OffsetPathForCollider(newPath, collider.radius * 1.1f);
-            }
-            else
-            {
-                Debug.LogWarning("No path found");
-            }
+            newPath = pathingAlgorithm.ShortestPath(start, goal);
+        }
+        else
+        {
+            Vector2 goal = StartPosition;
+            newPath = pathingAlgorithm.ShortestPath(start, goal);
+        }
+
+        if (newPath != null)
+        {
+            currentPath = OffsetPathForCollider(newPath, collider.radius * 1.1f);
             pathIndex = 0;
+        }
+        else
+        {
+            Debug.LogWarning("No path found");
+        }
+    }
+
+    private void UpdateAggro()
+    {
+        if (!isAggressive)
+        {
+            float distanceToPlayer = Vector2.Distance(rb.position, playerTransform.position);
+            if (distanceToPlayer < aggroDistance && !player.IsDead)
+            {
+                isAggressive = true;
+            }
         }
     }
 
@@ -56,7 +85,7 @@ public class FlyingEnemyAI : EnemyAI
         {
             return;
         }
-        if (!enableMovement)
+        if (!enableMovement || !isAggressive)
         {
             return;
         }
