@@ -37,6 +37,7 @@ public class ArrowSticking : MonoBehaviour
         stuckTo = targetRb.gameObject;
         transform.parent = targetRb.transform;
         rb.simulated = false;
+        Debug.Log("Stick to called at " + Time.frameCount);
     }
 
     public void Unstick()
@@ -49,6 +50,7 @@ public class ArrowSticking : MonoBehaviour
         transform.parent = null;
         rb.simulated = true;
         stuckTo = null;
+        Debug.Log("Unstick " + Time.frameCount);
     }
 
     public GameObject StuckTo()

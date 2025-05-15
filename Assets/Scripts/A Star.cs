@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 
 public class AStar : PathingAlgorithm
 {
-    public LayerMask groundLayer;
+    public CompositeCollider2D targetCollider;
     public float raycastOffset = 0.01f;
 
     private readonly List<Vector2> insideCorners = new();
@@ -24,7 +24,7 @@ public class AStar : PathingAlgorithm
     void Start()
     {
         FindCorners();
-        Assert.AreEqual(insideCorners.Count, outsideCorners.Count);
+        Debug.Assert(insideCorners.Count == outsideCorners.Count, "Inside and outside corners should be equal in count.");
 
         BuildVisibilityGraph(insideCorners, insideGraph);
         BuildVisibilityGraph(outsideCorners, outsideGraph);
@@ -35,40 +35,33 @@ public class AStar : PathingAlgorithm
 
     void FindCorners()
     {
-        CompositeCollider2D[] composites = FindObjectsByType<CompositeCollider2D>(FindObjectsSortMode.None);
         float offsetAmount = 0.2f;
         List<Vector2> corners = new();
-
-        foreach (var collider in composites)
+        int pathCount = targetCollider.pathCount;
+        for (int pathIndex = 0; pathIndex < pathCount; pathIndex++)
         {
-            if (((1 << collider.gameObject.layer) & groundLayer) == 0) continue;
+            Vector2[] path = new Vector2[targetCollider.GetPathPointCount(pathIndex)];
+            targetCollider.GetPath(pathIndex, path);
 
-            int pathCount = collider.pathCount;
-            for (int pathIndex = 0; pathIndex < pathCount; pathIndex++)
+            for (int i = 0; i < path.Length; i++)
             {
-                Vector2[] path = new Vector2[collider.GetPathPointCount(pathIndex)];
-                collider.GetPath(pathIndex, path);
+                Vector2 prev = path[(i - 1 + path.Length) % path.Length];
+                Vector2 current = path[i];
+                Vector2 next = path[(i + 1) % path.Length];
 
-                for (int i = 0; i < path.Length; i++)
-                {
-                    Vector2 prev = path[(i - 1 + path.Length) % path.Length];
-                    Vector2 current = path[i];
-                    Vector2 next = path[(i + 1) % path.Length];
+                Vector2 worldPrev = targetCollider.transform.TransformPoint(prev);
+                Vector2 worldCurrent = targetCollider.transform.TransformPoint(current);
+                Vector2 worldNext = targetCollider.transform.TransformPoint(next);
 
-                    Vector2 worldPrev = collider.transform.TransformPoint(prev);
-                    Vector2 worldCurrent = collider.transform.TransformPoint(current);
-                    Vector2 worldNext = collider.transform.TransformPoint(next);
+                Vector2 toPrev = (worldPrev - worldCurrent).normalized;
+                Vector2 toNext = (worldNext - worldCurrent).normalized;
+                Vector2 cornerNormal = (toPrev + toNext).normalized;
 
-                    Vector2 toPrev = (worldPrev - worldCurrent).normalized;
-                    Vector2 toNext = (worldNext - worldCurrent).normalized;
-                    Vector2 cornerNormal = (toPrev + toNext).normalized;
+                Vector2 pushed1 = worldCurrent - cornerNormal * offsetAmount;
+                Vector2 pushed2 = worldCurrent + cornerNormal * offsetAmount;
 
-                    Vector2 pushed1 = worldCurrent - cornerNormal * offsetAmount;
-                    Vector2 pushed2 = worldCurrent + cornerNormal * offsetAmount;
-
-                    if (!corners.Contains(pushed1)) corners.Add(pushed1);
-                    if (!corners.Contains(pushed2)) corners.Add(pushed2);
-                }
+                if (!corners.Contains(pushed1)) corners.Add(pushed1);
+                if (!corners.Contains(pushed2)) corners.Add(pushed2);
             }
         }
         HashSet<Vector2> visited = new();
@@ -148,11 +141,13 @@ public class AStar : PathingAlgorithm
 
     public bool IsVisible(Vector2 a, Vector2 b)
     {
-        var hits = Physics2D.LinecastAll(a + Vector2.up * raycastOffset, b + Vector2.up * raycastOffset, groundLayer);
+        var hits = Physics2D.LinecastAll(a + Vector2.up * raycastOffset, b + Vector2.up * raycastOffset, 1 << targetCollider.gameObject.layer);
         foreach (var hit in hits)
         {
             if (hit.collider != null && hit.distance > 0)
+            {
                 return false;
+            }
         }
         return true;
     }
@@ -235,7 +230,7 @@ public class AStar : PathingAlgorithm
         }
     }
 
-    public override List<Vector2> ShortestPath(Vector2 start, Vector2 goal)
+    public override List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PatherProperties? properties = null)
     {
         if (IsVisible(start, goal))
         {
@@ -307,7 +302,7 @@ public class AStar : PathingAlgorithm
         return bestPath;
     }
 
-    public override bool HasPath(Vector2 start, Vector2 goal)
+    public override bool HasPath(Vector2 start, Vector2 goal, PatherProperties? properties)
     {
         if (IsVisible(start, goal))
         {

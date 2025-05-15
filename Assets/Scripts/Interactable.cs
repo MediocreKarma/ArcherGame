@@ -30,7 +30,6 @@ public abstract class Interactable : MonoBehaviour
         {
             return;
         }
-        Debug.Log(collision.gameObject + " Outside " + Time.frameCount);
         collision.GetComponent<Player>().CurrentInteractable = null;
         interactPrompt.gameObject.SetActive(false);
     }

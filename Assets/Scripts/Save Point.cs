@@ -10,7 +10,7 @@ public class SavePoint : Interactable
     {
         if (IsTriggered) return;
 
-        //Debug.Log("saving");
+        interactor.health = interactor.MaxHealth;
         saveManager.SaveGame(this);
         interactPrompt.gameObject.SetActive(false);
         IsTriggered = true;

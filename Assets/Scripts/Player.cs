@@ -258,10 +258,6 @@ public class Player : MonoBehaviour
         IsDead = true;
         Physics2D.IgnoreCollision(GetComponentInChildren<Collider2D>(), GetComponent<Collider2D>(), true);
         yield return new WaitForSeconds(seconds);
-        rb.freezeRotation = true;
-        enableMovement = true;
-        IsDead = false;
-        FindFirstObjectByType<SaveManager>().LoadGame();
     }
 
     private IEnumerator DamageIFrames(float seconds)
@@ -300,6 +296,47 @@ public class Player : MonoBehaviour
         {
             CurrentInteractable.Trigger(this);
         }
+    }
+
+    public float restartHoldTime = 2f;
+    private Coroutine restartCoroutine;
+    public void RestartAction(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            // Start measuring hold
+            restartCoroutine = StartCoroutine(RestartCoroutine());
+        }
+        else if (context.canceled)
+        {
+            // Cancel hold
+            if (restartCoroutine != null)
+            {
+                StopCoroutine(restartCoroutine);
+                restartCoroutine = null;
+            }
+        }
+    }
+
+    private IEnumerator RestartCoroutine()
+    {
+        float timer = 0f;
+
+        while (timer < restartHoldTime)
+        {
+            timer += Time.deltaTime;
+            yield return null;
+        }
+        Restart();
+    }
+
+    private void Restart()
+    {
+        health = MaxHealth;
+        rb.freezeRotation = true;
+        enableMovement = true;
+        IsDead = false;
+        FindFirstObjectByType<SaveManager>().LoadGame();
     }
 
     //private bool SlopeCheck()

@@ -1,4 +1,5 @@
 using System.Collections;
+using Unity.VisualScripting.FullSerializer.Internal;
 using UnityEngine;
 using UnityEngine.Rendering.UI;
 
@@ -17,6 +18,7 @@ public class EnemyAI : MonoBehaviour
     protected bool hasArrowStuck = false;
     protected bool enableMovement = true;
     protected bool hasImmunity = true;
+    protected bool isFacingRight = true;
 
     public int StartHitpoints { get; private set; }
     public Vector2 StartPosition { get; private set; }
@@ -41,23 +43,51 @@ public class EnemyAI : MonoBehaviour
     protected virtual void Update()
     {
         timeSinceLastHit += Time.deltaTime;
+        TryRotateSprite();
+    }
+
+    private void TryRotateSprite()
+    {
+        if (!isAlive) return;
+        float horizontalMovement = rb.linearVelocityX;
+        if ((isFacingRight && horizontalMovement < 0f) || (!isFacingRight && horizontalMovement > 0f))
+        {
+            RotateSprite();
+        }
+    }
+
+    protected void RotateSprite()
+    {
+        isFacingRight = !isFacingRight;
+        Vector3 localScale = transform.localScale;
+        localScale.x *= -1f;
+        transform.localScale = localScale;
     }
 
     protected void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Arrow"))
         {
-            //Debug.Log("EnemyAI Hit by arrow");
-
+            Debug.Log("Arrow hit enemy at " + Time.frameCount);
             ArrowSticking arrow = collision.gameObject.GetComponent<ArrowSticking>();
             if (arrow.StuckTo() == gameObject)
             {
+                Debug.Log("Arrow already stuck to enemy at " + Time.frameCount);
                 return;
             }
             arrow.StickTo(GetComponent<Rigidbody2D>(), collision);
             hasArrowStuck = true;
+            for (int i = 0; i < collision.contactCount; i++)
+            {
+                ContactPoint2D contact = collision.GetContact(i);
+                if (contact.otherCollider.CompareTag("Shield"))
+                {
+                    Debug.Log("Arrow hit shield " + Time.frameCount);
+                    return;
+                }
+            }
+            Debug.Log("Arrow dealt damage " + Time.frameCount);
             hitpoints--;
-
             if (hitpoints <= 0)
             {
                 Die(collision);

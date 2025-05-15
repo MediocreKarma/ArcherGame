@@ -58,6 +58,7 @@ public class SaveManager : MonoBehaviour
             enemies[i].isAlive = data.enemies[i].isAlive;
             enemies[i].transform.SetPositionAndRotation(enemies[i].StartPosition, Quaternion.identity);
             enemies[i].hitpoints = enemies[i].StartHitpoints;
+            enemies[i].isAggressive = false;
         }
         previousSavePoint = FindObjectsByType<SavePoint>(FindObjectsSortMode.None)
             .FirstOrDefault(sp => sp.gameObject.name == data.triggeredSavePoint);

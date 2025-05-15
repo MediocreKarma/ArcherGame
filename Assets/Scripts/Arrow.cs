@@ -20,6 +20,7 @@ public class Arrow : MonoBehaviour
     private PathingAlgorithm pathing;
 
     private bool isInsideWall = false;
+    private Coroutine returnCoroutine;
 
     public Vector3 OriginPosition()
     {
@@ -45,14 +46,23 @@ public class Arrow : MonoBehaviour
     }
     public void Return()
     {
-        if (isReturning || !isLaunched) 
+        if (!isLaunched) 
         { 
             return;
         }
         isReturning = true;
         transform.SetParent(null);
-        StartCoroutine(ReturnSequence());
+
+        if (returnCoroutine != null)
+        {
+            StopCoroutine(returnCoroutine);
+            returnCoroutine = null;
+        }
+        
+        returnCoroutine = StartCoroutine(ReturnSequence());
     }
+
+    public float jumpTime = 0.5f;
 
     private IEnumerator ReturnSequence()
     {
@@ -69,8 +79,8 @@ public class Arrow : MonoBehaviour
                 stuckTo.layer == LayerMask.NameToLayer("Level")
             );
             rb.simulated = true;
-            rb.linearVelocity = jumpDirection * retrieveSpeed;
-            yield return new WaitForSeconds(0.1f); // Jumping from the wall takes 0.1 seconds
+            rb.linearVelocity = 3f * retrieveSpeed * jumpDirection;
+            yield return new WaitForSeconds(jumpTime);
             hasHit = false;
             isJumping = false;
             isInsideWall = false;
@@ -93,7 +103,7 @@ public class Arrow : MonoBehaviour
     {
         if (!isInsideWall)
         {
-            return -transform.right;
+            return -transform.TransformDirection(Vector3.right);
         }
         Debug.Log("Was inside wall!");
 
@@ -104,10 +114,10 @@ public class Arrow : MonoBehaviour
         {
             Vector2 closestPoint = closestCollider.ClosestPoint(transform.position);
             Debug.Log(-((Vector2)transform.position - closestPoint).normalized);
-            StartCoroutine(DisableCollider(closestCollider, 0.1f));
+            StartCoroutine(DisableCollider(closestCollider, jumpTime));
             return -((Vector2)transform.position - closestPoint).normalized;
         }
-        return -transform.right;
+        return -transform.TransformDirection(Vector3.right);
     }
 
     private IEnumerator DisableCollider(Collider2D collider, float seconds)
@@ -136,7 +146,7 @@ public class Arrow : MonoBehaviour
         originalPosition = transform.localPosition;
         bowParent = transform.parent;
         sticking = GetComponent<ArrowSticking>();
-        pathing = FindFirstObjectByType<PathingAlgorithm>();
+        pathing = FindFirstObjectByType<AStar>();
         arrowCollider = GetComponentInChildren<Collider2D>();
     }
 
@@ -153,7 +163,7 @@ public class Arrow : MonoBehaviour
         isReturning = false;
         //transform.SetParent(collision.transform);
         //rb.simulated = false;
-        sticking.StickTo(collision.rigidbody, collision);
+        //sticking.StickTo(collision.rigidbody, collision);
     }
 
     private void OnTriggerEnter2D(Collider2D collision)

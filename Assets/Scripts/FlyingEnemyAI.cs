@@ -77,6 +77,10 @@ public class FlyingEnemyAI : EnemyAI
                 isAggressive = true;
             }
         }
+        else
+        {
+            isAggressive = !player.IsDead;
+        }
     }
 
     void FixedUpdate()
@@ -85,7 +89,7 @@ public class FlyingEnemyAI : EnemyAI
         {
             return;
         }
-        if (!enableMovement || !isAggressive)
+        if (!enableMovement)
         {
             return;
         }
@@ -109,7 +113,6 @@ public class FlyingEnemyAI : EnemyAI
             }
         }
 #if UNITY_EDITOR
-        // Draw and raycast between each path segment (just for visual debug)
         for (int i = 0; i < currentPath.Count - 1; i++)
         {
             Vector2 from = currentPath[i];
