@@ -30666,6 +30666,22 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: 093429e0-8d88-4409-a7c4-3f6011dbb484
     m_ActionName: Player/Restart
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 553121895}
+        m_TargetAssemblyTypeName: Player, Assembly-CSharp
+        m_MethodName: Quit
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: 7504a4dc-bcaa-4f33-bb92-38029e1f9a77
+    m_ActionName: 'Player/Quit[/Keyboard/escape]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: Keyboard&Mouse
   m_DefaultActionMap: Player

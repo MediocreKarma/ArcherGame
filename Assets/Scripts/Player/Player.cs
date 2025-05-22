@@ -369,6 +369,18 @@ public class Player : MonoBehaviour
         FindFirstObjectByType<SaveManager>().LoadGame();
     }
 
+    public void Quit(InputAction.CallbackContext context)
+    {
+        if (!context.performed)
+            return;
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
+
     //private bool SlopeCheck()
     //{
     //}
