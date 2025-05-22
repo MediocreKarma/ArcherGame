@@ -79,24 +79,16 @@ public class SaveManager : MonoBehaviour
         player.transform.SetPositionAndRotation(data.player.position, Quaternion.identity);
         player.health = player.MaxHealth;
         Arrow arrow = FindFirstObjectByType<Arrow>();
+        arrow.Sticking.Unstick();
         arrow.RearmingBow();
         for (int i = 0; i < enemies.Length; ++i)
         {
-            Debug.Log(enemies[i].gameObject.name + $" -> {data.enemies[i].isActivated && data.enemies[i].isAlive}");
             bool enabled = data.enemies[i].isActivated && data.enemies[i].isAlive;
             enemies[i].gameObject.SetActive(enabled);
             if (enabled)
             {
                 enemies[i].Reset();
             }
-            enemies[i].isAlive = data.enemies[i].isAlive;
-            enemies[i].transform.SetPositionAndRotation(enemies[i].StartPosition, Quaternion.identity);
-            enemies[i].hitpoints = enemies[i].StartHitpoints;
-            enemies[i].isAggressive = false;
-            var rb = enemies[i].GetComponent<Rigidbody2D>();
-            rb.freezeRotation = true;
-            rb.angularVelocity = 0f;
-            rb.linearVelocity = Vector2.zero;
         }
 
         doorDeathController.LoadSaveData(data.deathDoors);

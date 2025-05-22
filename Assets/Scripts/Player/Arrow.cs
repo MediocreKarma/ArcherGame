@@ -16,7 +16,7 @@ public class Arrow : MonoBehaviour
     public float retrieveSpeed = 15f;
     private bool isReturning = false;
     private bool isJumping = false;
-    private ArrowSticking sticking;
+    public ArrowSticking Sticking { get; private set; }
     private PathingAlgorithm pathing;
 
     private bool isInsideWall = false;
@@ -66,8 +66,8 @@ public class Arrow : MonoBehaviour
 
     private IEnumerator ReturnSequence()
     {
-        GameObject stuckTo = sticking.StuckTo();
-        sticking.Unstick();
+        GameObject stuckTo = Sticking.StuckTo();
+        Sticking.Unstick();
         if (hasHit)
         {
             isInsideWall = !pathing.HasPath(transform.position, bowParent.position);
@@ -134,6 +134,8 @@ public class Arrow : MonoBehaviour
         transform.localEulerAngles = Vector3.zero;
         isReturning = false;
         isLaunched = false;
+        isJumping = false;
+        hasHit = false;
         rb.transform.localScale = new Vector3(1, 1.5f, 1);
         rb.gravityScale = 1f;
     }
@@ -144,7 +146,7 @@ public class Arrow : MonoBehaviour
         rb.simulated = false;
         originalPosition = transform.localPosition;
         bowParent = transform.parent;
-        sticking = GetComponent<ArrowSticking>();
+        Sticking = GetComponent<ArrowSticking>();
         pathing = FindFirstObjectByType<AStar>();
         arrowCollider = GetComponentInChildren<Collider2D>();
     }
@@ -152,7 +154,7 @@ public class Arrow : MonoBehaviour
     private void OnCollisionEnter2D(Collision2D collision)
     {
         //Debug.Log("Arrow Hit " + collision.gameObject.name + " at " + Time.frameCount);
-        if ((isJumping && collision.gameObject == sticking.StuckTo()) || !isLaunched || hasHit)
+        if ((isJumping && collision.gameObject == Sticking.StuckTo()) || !isLaunched || hasHit)
         {
             return;
         }
