@@ -25,7 +25,7 @@ public abstract class EnemyAI : MonoBehaviour
     protected int pathIndex = 0;
     protected float pathTimer = 0f;
     protected const float pathInterval = 0.333f;
-    protected List<Vector2> currentPath = new();
+    public List<Vector2> currentPath = new();
 
     public event System.Action OnDeath;
 
@@ -47,6 +47,21 @@ public abstract class EnemyAI : MonoBehaviour
         arrowSticking = FindFirstObjectByType<ArrowSticking>();
         StartHitpoints = hitpoints;
         StartPosition = transform.position;
+    }
+
+    public void Reset()
+    {
+        isAggressive = false;
+        transform.SetPositionAndRotation(StartPosition, Quaternion.identity);
+        isAlive = true;
+        hitpoints = StartHitpoints;
+        hasArrowStuck = false;
+        enableMovement = true;
+        pathIndex = 0;
+        currentPath.Clear();
+        rb.freezeRotation = true;
+        rb.angularVelocity = 0f;
+        rb.linearVelocity = Vector2.zero;
     }
 
     protected virtual void Update()

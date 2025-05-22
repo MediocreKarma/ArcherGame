@@ -83,7 +83,12 @@ public class SaveManager : MonoBehaviour
         for (int i = 0; i < enemies.Length; ++i)
         {
             Debug.Log(enemies[i].gameObject.name + $" -> {data.enemies[i].isActivated && data.enemies[i].isAlive}");
-            enemies[i].gameObject.SetActive(data.enemies[i].isActivated && data.enemies[i].isAlive);
+            bool enabled = data.enemies[i].isActivated && data.enemies[i].isAlive;
+            enemies[i].gameObject.SetActive(enabled);
+            if (enabled)
+            {
+                enemies[i].Reset();
+            }
             enemies[i].isAlive = data.enemies[i].isAlive;
             enemies[i].transform.SetPositionAndRotation(enemies[i].StartPosition, Quaternion.identity);
             enemies[i].hitpoints = enemies[i].StartHitpoints;
