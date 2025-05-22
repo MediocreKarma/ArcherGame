@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Unity.VisualScripting;
 using System.Collections.Generic;
+using UnityEngine.InputSystem.XR;
 
 public class SaveManager : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class SaveManager : MonoBehaviour
 
     private Player player;
     private EnemyAI[] enemies;
+    private DoorDeathController doorDeathController;
 
     private SavePoint previousSavePoint;
     //public GameSaveData SaveData { get; private set; }
@@ -23,6 +25,8 @@ public class SaveManager : MonoBehaviour
                 position = player.transform.position,
             },
             enemies = new List<EnemyData>(),
+            deathDoors = doorDeathController.GetSaveData(),
+            triggeredSavePoint = point.gameObject.name
         };
 
         foreach (var enemy in enemies)
@@ -33,8 +37,8 @@ public class SaveManager : MonoBehaviour
                 isAlive = enemy.isAlive,
             });
         }
+
         previousSavePoint.IsTriggered = false;
-        data.triggeredSavePoint = point.gameObject.name;
         previousSavePoint = point;
 
         string json = JsonUtility.ToJson(data);
@@ -59,19 +63,31 @@ public class SaveManager : MonoBehaviour
             enemies[i].transform.SetPositionAndRotation(enemies[i].StartPosition, Quaternion.identity);
             enemies[i].hitpoints = enemies[i].StartHitpoints;
             enemies[i].isAggressive = false;
+            var rb = enemies[i].GetComponent<Rigidbody2D>();
+            rb.angularVelocity = 0f;
+            rb.linearVelocity = Vector2.zero;
         }
         previousSavePoint = FindObjectsByType<SavePoint>(FindObjectsSortMode.None)
             .FirstOrDefault(sp => sp.gameObject.name == data.triggeredSavePoint);
         previousSavePoint.IsTriggered = true;
+
+        doorDeathController.LoadSaveData(data.deathDoors);
+
+        previousSavePoint = FindObjectsByType<SavePoint>(FindObjectsSortMode.None)
+            .FirstOrDefault(sp => sp.gameObject.name == data.triggeredSavePoint);
+
+        if (previousSavePoint != null)
+        {
+            previousSavePoint.IsTriggered = true;
+        }
     }
 
-    private void Start()
+    public void Init()
     {
-        enemies = Resources.FindObjectsOfTypeAll<EnemyAI>()
-            .Where(e => e.gameObject.scene.IsValid())
-            .ToArray();
+        enemies = FindObjectsByType<EnemyAI>(FindObjectsSortMode.InstanceID);
         player = FindFirstObjectByType<Player>();
         previousSavePoint = GameObject.Find("Save Point #0").GetComponent<SavePoint>();
+        doorDeathController = FindFirstObjectByType<DoorDeathController>();
         SaveGame(previousSavePoint);
     }
 }

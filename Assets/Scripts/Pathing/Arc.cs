@@ -1,18 +1,18 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class JumpArc
+public class Arc
 {
     public Vector2 start;
     public Vector2 end;
     public Vector2 peak;
 
-    public JumpArc(Vector2 start, Vector2 end)
+    public Arc(Vector2 start, Vector2 end, float peakHeight = 1f)
     {
         this.start = start;
         this.end = end;
 
-        float peakY = Mathf.Max(start.y, end.y) + Mathf.Abs(end.y - start.y) + 1f;
+        float peakY = Mathf.Max(start.y, end.y) + peakHeight;
         peak = new Vector2((start.x + end.x) / 2f, peakY);
     }
 

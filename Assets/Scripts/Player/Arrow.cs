@@ -51,7 +51,7 @@ public class Arrow : MonoBehaviour
             return;
         }
         isReturning = true;
-        transform.SetParent(null);
+        //transform.SetParent(null);
 
         if (returnCoroutine != null)
         {
@@ -75,8 +75,7 @@ public class Arrow : MonoBehaviour
             isJumping = true;
             Vector2 jumpDirection = ComputeJumpDirection(
                 isInsideWall &&
-                stuckTo != null &&
-                stuckTo.layer == LayerMask.NameToLayer("Level")
+                (stuckTo == null || stuckTo != null && stuckTo.layer == LayerMask.NameToLayer("Level"))
             );
             rb.simulated = true;
             rb.linearVelocity = 3f * retrieveSpeed * jumpDirection;
@@ -105,7 +104,6 @@ public class Arrow : MonoBehaviour
         {
             return -transform.TransformDirection(Vector3.right);
         }
-        Debug.Log("Was inside wall!");
 
         Collider2D[] levelColliders = Physics2D.OverlapCircleAll(transform.position, 1f, LayerMask.GetMask("Level"));
         Collider2D closestCollider = levelColliders.Length > 0 ? levelColliders[0] : null;
@@ -136,6 +134,7 @@ public class Arrow : MonoBehaviour
         transform.localEulerAngles = Vector3.zero;
         isReturning = false;
         isLaunched = false;
+        rb.transform.localScale = new Vector3(1, 1.5f, 1);
         rb.gravityScale = 1f;
     }
 

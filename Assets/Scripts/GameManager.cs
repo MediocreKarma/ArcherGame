@@ -1,0 +1,18 @@
+using UnityEngine;
+
+public class GameManager : MonoBehaviour
+{
+    [SerializeField] private SaveManager saveManager;
+    [SerializeField] private DoorDeathController doorController;
+
+    private void Start()
+    {
+        var deathDoors = FindObjectsByType<DoorDeath>(FindObjectsSortMode.None);
+        foreach (var door in deathDoors)
+        {
+            door.Init();
+        }
+        doorController.Init();
+        saveManager.Init();
+    }
+}

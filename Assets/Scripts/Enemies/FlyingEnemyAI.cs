@@ -4,13 +4,7 @@ using UnityEngine.UIElements;
 
 public class FlyingEnemyAI : EnemyAI
 {
-    private List<Vector2> currentPath = new();
     private new CircleCollider2D collider;
-    private int pathIndex = 0;
-
-    private float pathTimer = 0f;
-    private const float pathInterval = 0.333f;
-    public float aggroDistance = 10f;
 
     private new void Start()
     {
@@ -19,30 +13,12 @@ public class FlyingEnemyAI : EnemyAI
         collider = GetComponentInChildren<CircleCollider2D>();
     }
 
-    private new void Update()
+    protected override void PerformPathUpdate()
     {
-        base.Update();
-        if (!isAlive)
-        {
-            rb.gravityScale = 4f;
-            return;
-        }
-        if (!enableMovement)
+        if (!pathingAlgorithm)
         {
             return;
         }
-        UpdatePath();
-        UpdateAggro();
-    }
-
-    private void UpdatePath()
-    {
-        pathTimer -= Time.deltaTime;
-        if (pathTimer > 0f)
-        {
-            return;
-        }
-        pathTimer = pathInterval;
         List<Vector2> newPath;
         Vector2 start = rb.position;
         if (isAggressive)
@@ -67,20 +43,9 @@ public class FlyingEnemyAI : EnemyAI
         }
     }
 
-    private void UpdateAggro()
+    private new void Update()
     {
-        if (!isAggressive)
-        {
-            float distanceToPlayer = Vector2.Distance(rb.position, playerTransform.position);
-            if (distanceToPlayer < aggroDistance && !player.IsDead)
-            {
-                isAggressive = true;
-            }
-        }
-        else
-        {
-            isAggressive = !player.IsDead;
-        }
+        base.Update();
     }
 
     void FixedUpdate()

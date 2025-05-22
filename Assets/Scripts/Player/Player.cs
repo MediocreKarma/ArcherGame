@@ -17,7 +17,9 @@ public class Player : MonoBehaviour
 
     public float dashCooldown = 2f;
     private float timeSinceLastDash = 2f;
+    public float TimeSinceLastDash => timeSinceLastDash;
     private bool canDash = true;
+    public bool CanDash => canDash;
 
     public float groundedForgiveness = 0.075f;
     private float timeSinceLastGrounded = 0.075f;

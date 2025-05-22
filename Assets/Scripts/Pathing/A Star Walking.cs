@@ -10,7 +10,7 @@ public class PlatformPathGraph : PathingAlgorithm
 {
     public List<IslandTopDetector.LineSegment> topSurfaces;
     public List<IslandTopDetector.LineSegment> platformSurfaces = new();
-    public float nodeSpacing = 1f;
+    public float nodeSpacing = 0.5f;
     public float maxSidewaysFallDistance = 1.1f;
     public float maxJumpDistance = 6f;
     public LayerMask levelMask;
@@ -24,7 +24,7 @@ public class PlatformPathGraph : PathingAlgorithm
 
     private void Start()
     {
-        topSurfaces = GetComponent<IslandTopDetector>().topSurfaces;
+        topSurfaces = GetComponent<IslandTopDetector>().TopSurfaces;
         var platformParent = GameObject.Find("Platforms");
         foreach (var platformCollider in platformParent.GetComponentsInChildren<BoxCollider2D>())
         {
@@ -74,7 +74,6 @@ public class PlatformPathGraph : PathingAlgorithm
                 mergedNodes.Add(current);
             }
         }
-        Debug.Log($"Removed nodes: {nodes.Count - mergedNodes.Count}");
         nodes = mergedNodes;
     }
 
@@ -169,8 +168,8 @@ public class PlatformPathGraph : PathingAlgorithm
                 float dx = Mathf.Abs(candidate.position.x - fallNode.position.x);
                 float dy = fallNode.position.y - candidate.position.y;
 
-                if (dy <= 0.02f) continue; // Not below
-                if (dx > maxSidewaysFallDistance) continue; // Too far horizontally
+                if (dy <= -0.02f) continue; // Not below
+                if (dx > Mathf.Abs(dy) * 1.6f) continue; // Too far horizontally
 
                 Vector2 origin = fallNode.position + Vector2.up * 0.1f;
                 Vector2 target = candidate.position + Vector2.up * 0.1f;
@@ -234,7 +233,7 @@ public class PlatformPathGraph : PathingAlgorithm
         {
             foreach (var pair in jumpArcs)
             {
-                JumpArc arc = pair.Value;
+                Arc arc = pair.Value;
 
                 const int segments = 20;
                 Vector2 prev = arc.GetPointAt(0);
@@ -271,8 +270,8 @@ public class PlatformPathGraph : PathingAlgorithm
             new Vector2(0, properties.height / 2f),
             new Vector2(properties.width, properties.height - 0.1f)
         );
-        Node startNode = FindClosestNode(start);
-        Node goalNode = FindClosestNode(goal);
+        Node startNode = FindClosestNodeBelow(start);
+        Node goalNode = FindClosestNodeBelow(goal);
 
         var openSet = new SortedSet<PathNode>(Comparer<PathNode>.Create((x, y) => {
             var costComparison = x.fCost.CompareTo(y.fCost);
@@ -302,7 +301,7 @@ public class PlatformPathGraph : PathingAlgorithm
             openDict.Remove(current.node);
 
             if (current.node == goalNode)
-                return ReconstructPath(current, start, goal);
+                return ReconstructPath(current, start, goal, walkerBounds);
 
             closedSet.Add(current.node);
 
@@ -351,7 +350,7 @@ public class PlatformPathGraph : PathingAlgorithm
         return new List<Vector2>(); // No path found
     }
 
-    private List<Vector2> ReconstructPath(PathNode endNode, Vector2 start, Vector2 goal)
+    private List<Vector2> ReconstructPath(PathNode endNode, Vector2 start, Vector2 goal, Bounds properties)
     {
         var path = new List<Vector2> { goal };
         PathNode current = endNode;
@@ -365,14 +364,20 @@ public class PlatformPathGraph : PathingAlgorithm
             switch (current.connectingEdgeType)
             {
                 case EdgeType.Walk:
-                case EdgeType.Fall:
                     path.Add(to);
                     break;
-
-                case EdgeType.Jump:
-                    List<Vector2> arc = new JumpArc(to, from).GenerateJumpArcPoints(10);
+                case EdgeType.Fall:
+                {
+                    List<Vector2> arc = new Arc(to, from, 0f).GenerateJumpArcPoints(10);
                     path.AddRange(arc);
                     break;
+                }
+                case EdgeType.Jump:
+                {
+                    List<Vector2> arc = new Arc(to, from, 3f).GenerateJumpArcPoints(10);
+                    path.AddRange(arc);
+                    break;
+                }
             }
 
             current = current.parent;
@@ -382,42 +387,48 @@ public class PlatformPathGraph : PathingAlgorithm
         return path;
     }
 
-    private Node FindClosestNode(Vector2 position)
+    private Node FindClosestNodeBelow(Vector2 position, float horizontalTolerance = 3f)
     {
         Node closest = null;
         float minDist = float.MaxValue;
 
         foreach (var node in nodes)
         {
-            float dist = Vector2.Distance(position, node.position);
-            if (dist < minDist)
+            bool isBelow = position.y - node.position.y >= -0.5f;
+
+            if (isBelow)
             {
-                closest = node;
-                minDist = dist;
+                float dist = Vector2.Distance(position, node.position);
+                if (dist < minDist)
+                {
+                    closest = node;
+                    minDist = dist;
+                }
             }
         }
+
         return closest;
     }
 
 
-    public override bool HasPath(Vector2 start, Vector2 goal, PatherProperties? properties = null)
+    public override bool HasPath(Vector2 start, Vector2 goal, PatherProperties properties = null)
     {
         throw new System.NotImplementedException();
     }
 
-    public bool HasPath(Vector2 start, Vector2 goal, WalkerProperties? properties = null)
+    public bool HasPath(Vector2 start, Vector2 goal, WalkerProperties properties = null)
     {
         throw new System.NotImplementedException();
     }
 
 
-    private readonly Dictionary<Edge, JumpArc> jumpArcs = new();
+    private readonly Dictionary<Edge, Arc> jumpArcs = new();
 
     private void GenerateJumpArcFor(Edge edge)
     {
         if (edge.type == EdgeType.Jump)
         {
-            var arc = new JumpArc(edge.from.position, edge.to.position);
+            var arc = new Arc(edge.from.position, edge.to.position, 3f);
             jumpArcs[edge] = arc;
         }
     }
@@ -450,7 +461,7 @@ public class PlatformPathGraph : PathingAlgorithm
         return !Physics2D.OverlapBox(walkerBounds.center + (Vector3)position, walkerBounds.size, 0f, levelMask);
     }
 
-    private bool IsArcValid(JumpArc arc, Bounds walkerBounds, int segments = 10)
+    private bool IsArcValid(Arc arc, Bounds walkerBounds, int segments = 10)
     {
         for (int i = 0; i <= segments; i++)
         {

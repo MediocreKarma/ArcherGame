@@ -1,15 +1,17 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static UnityEngine.Rendering.DebugUI;
 public class IslandTopDetector : MonoBehaviour
 {
     public CompositeCollider2D targetCollider;
 
     private readonly List<LineSegment> horizontalEdges = new();
     private readonly List<LineSegment> verticalEdges = new();
-    public List<LineSegment> topSurfaces { get; private set; } = new();
+    public List<LineSegment> TopSurfaces { get; private set; } = new();
     private readonly List<EdgeCornerInfo> topSurfaceCorners = new();
 
     private void Awake()
@@ -100,7 +102,7 @@ public class IslandTopDetector : MonoBehaviour
         var cnt2 = 0;
         var cnt3 = 0;
 
-        foreach (var edge in topSurfaces)
+        foreach (var edge in TopSurfaces)
         {
             Vector2[] corners = { edge.start, edge.end };
 
@@ -145,12 +147,13 @@ public class IslandTopDetector : MonoBehaviour
 
     private void FindTopSurfaces()
     {
-        topSurfaces.Clear();
+        TopSurfaces.Clear();
 
         foreach (var edge in horizontalEdges)
         {
             Vector2 midPoint = (edge.start + edge.end) * 0.5f;
             float rayX = midPoint.x;
+            rayX = Mathf.Floor(rayX) + 0.5f;
 
             List<Vector2> intersections = new();
 
@@ -184,42 +187,13 @@ public class IslandTopDetector : MonoBehaviour
                 {
                     Vector2 startWorld = targetCollider.transform.TransformPoint(edge.start);
                     Vector2 endWorld = targetCollider.transform.TransformPoint(edge.end);
-                    topSurfaces.Add(new(startWorld, endWorld));
+                    TopSurfaces.Add(new(startWorld, endWorld));
                     break;
                 }
             }
         }
 
-        Debug.Log($"Identified {topSurfaces.Count} top surfaces.");
-    }
-
-    private void OnDrawGizmosSelected()
-    {
-        return;
-        if (topSurfaces != null)
-        {
-            Gizmos.color = Color.green;
-            foreach (var edge in topSurfaces)
-            {
-                Gizmos.DrawLine(edge.start, edge.end);
-            }
-        }
-        if (topSurfaceCorners != null)
-        {
-            Gizmos.color = Color.blue;
-            foreach (var corner in topSurfaceCorners)
-            {
-                if (corner.hasWall && corner.wallGoesUp)
-                {
-                    Vector3 top = corner.position;
-                    Vector3 bottom = new(top.x, top.y + corner.wallHeight, top.z);
-                    Gizmos.DrawLine(top, bottom);
-
-                    // Optional: small sphere to mark start point
-                    Gizmos.DrawSphere(top, 0.05f);
-                }
-            }
-        }
+        Debug.Log($"Identified {TopSurfaces.Count} top surfaces.");
     }
 
     public struct LineSegment

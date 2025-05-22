@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 public class AStar : PathingAlgorithm
 {
     public CompositeCollider2D targetCollider;
     public float raycastOffset = 0.01f;
 
-    private readonly List<Vector2> insideCorners = new();
-    private readonly List<Vector2> outsideCorners = new();
+    private List<Vector2> insideCorners = new();
+    private List<Vector2> outsideCorners = new();
 
     private readonly Dictionary<Vector2, Dictionary<Vector2, float>> insideGraph = new();
     private readonly Dictionary<Vector2, Dictionary<Vector2, float>> outsideGraph = new();
@@ -35,7 +36,7 @@ public class AStar : PathingAlgorithm
 
     void FindCorners()
     {
-        float offsetAmount = 0.2f;
+        float offsetAmount = 0.25f;
         List<Vector2> corners = new();
         int pathCount = targetCollider.pathCount;
         for (int pathIndex = 0; pathIndex < pathCount; pathIndex++)
@@ -92,15 +93,37 @@ public class AStar : PathingAlgorithm
             else
                 insideCorners.Add(pt);
         }
+        float closestPointInside = 0f;
+        float closestPointOutside = 0f;
 
-#if UNITY_EDITOR
+        var player = GameObject.Find("Player");
         foreach (var pt in insideCorners)
         {
-            DebugDrawCircle(pt, 0.02f, Color.red, 10f);
+            float dist = Vector2.Distance(pt, player.transform.position);
+            if (dist < closestPointInside || closestPointInside == 0f)
+                closestPointInside = dist;
         }
         foreach (var pt in outsideCorners)
         {
-            DebugDrawCircle(pt, 0.02f, Color.blue, 10f);
+            float dist = Vector2.Distance(pt, player.transform.position);
+            if (dist < closestPointOutside || closestPointOutside == 0f)
+                closestPointOutside = dist;
+        }
+        if (closestPointInside < closestPointOutside)
+        {
+            (outsideCorners, insideCorners) = (insideCorners, outsideCorners);
+        }
+
+#if UNITY_EDITOR
+
+
+        foreach (var pt in insideCorners)
+        {
+            DebugDrawCircle(pt, 0.02f, Color.red, 1000f);
+        }
+        foreach (var pt in outsideCorners)
+        {
+            DebugDrawCircle(pt, 0.02f, Color.blue, 1000f);
         }
 #endif
     }
@@ -144,7 +167,7 @@ public class AStar : PathingAlgorithm
         var hits = Physics2D.LinecastAll(a + Vector2.up * raycastOffset, b + Vector2.up * raycastOffset, 1 << targetCollider.gameObject.layer);
         foreach (var hit in hits)
         {
-            if (hit.collider != null && hit.distance > 0)
+            if (hit.collider == targetCollider)
             {
                 return false;
             }
@@ -230,7 +253,7 @@ public class AStar : PathingAlgorithm
         }
     }
 
-    public override List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PatherProperties? properties = null)
+    public override List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PatherProperties properties = null)
     {
         if (IsVisible(start, goal))
         {
@@ -302,7 +325,7 @@ public class AStar : PathingAlgorithm
         return bestPath;
     }
 
-    public override bool HasPath(Vector2 start, Vector2 goal, PatherProperties? properties)
+    public override bool HasPath(Vector2 start, Vector2 goal, PatherProperties properties)
     {
         if (IsVisible(start, goal))
         {

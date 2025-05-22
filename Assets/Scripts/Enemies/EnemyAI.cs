@@ -1,10 +1,11 @@
 using System.Collections;
+using System.Collections.Generic;
 using Unity.VisualScripting.FullSerializer.Internal;
 using UnityEngine;
 using UnityEngine.Rendering.UI;
 
 [RequireComponent(typeof(Rigidbody2D))]
-public class EnemyAI : MonoBehaviour
+public abstract class EnemyAI : MonoBehaviour
 {
     protected Transform playerTransform;
     protected Player player;
@@ -19,6 +20,14 @@ public class EnemyAI : MonoBehaviour
     protected bool enableMovement = true;
     protected bool hasImmunity = true;
     protected bool isFacingRight = true;
+
+    public float aggroDistance = 10f;
+    protected int pathIndex = 0;
+    protected float pathTimer = 0f;
+    protected const float pathInterval = 0.333f;
+    protected List<Vector2> currentPath = new();
+
+    public event System.Action OnDeath;
 
     public int StartHitpoints { get; private set; }
     public Vector2 StartPosition { get; private set; }
@@ -44,9 +53,49 @@ public class EnemyAI : MonoBehaviour
     {
         timeSinceLastHit += Time.deltaTime;
         TryRotateSprite();
+        if (!isAlive)
+        {
+            rb.gravityScale = 4f;
+            return;
+        }
+        if (!enableMovement)
+        {
+            return;
+        }
+        UpdatePath();
+        UpdateAggro();
     }
 
-    private void TryRotateSprite()
+    protected abstract void PerformPathUpdate();
+
+    protected virtual void UpdatePath()
+    {
+        pathTimer -= Time.deltaTime;
+        if (pathTimer > 0f)
+        {
+            return;
+        }
+        pathTimer = pathInterval;
+        PerformPathUpdate();
+    }
+
+    private void UpdateAggro()
+    {
+        if (!isAggressive)
+        {
+            float distanceToPlayer = Vector2.Distance(rb.position, playerTransform.position);
+            if (distanceToPlayer < aggroDistance && !player.IsDead)
+            {
+                isAggressive = true;
+            }
+        }
+        else
+        {
+            isAggressive = !player.IsDead;
+        }
+    }
+
+    protected virtual void TryRotateSprite()
     {
         if (!isAlive) return;
         float horizontalMovement = rb.linearVelocityX;
@@ -115,7 +164,9 @@ public class EnemyAI : MonoBehaviour
 
     private void Die(Collision2D collision)
     {
+        if (!isAlive) return;
         hitpoints = 0;
+        OnDeath?.Invoke();
         isAlive = false;
         rb.freezeRotation = false;
         rb.AddForce(collision.transform.right * 2f, ForceMode2D.Impulse);
@@ -142,13 +193,18 @@ public class EnemyAI : MonoBehaviour
         yield return new WaitForSeconds(seconds);
         while (timeSinceLastHit < keepAliveSeconds || arrowSticking.StuckTo() == gameObject)
         {
+            if (isAlive)
+                yield break;
             if (timeSinceLastHit >= keepAliveSeconds)
             {
                 timeSinceLastHit = 0f;
             }
             yield return new WaitForSeconds(keepAliveSeconds - timeSinceLastHit);
         }
-        gameObject.SetActive(false);
+        if (!isAlive)
+        {
+            gameObject.SetActive(false);
+        }
     }
 
     protected Vector2 GetTargetPosition()

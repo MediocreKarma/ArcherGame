@@ -16,9 +16,17 @@ public class EnemyData
 }
 
 [System.Serializable]
+public class DoorDeathData
+{
+    public string doorId;
+    public int counter;
+}
+
+[System.Serializable]
 public class GameSaveData
 {
     public PlayerData player;
     public List<EnemyData> enemies;
+    public List<DoorDeathData> deathDoors;
     public string triggeredSavePoint;
 }
