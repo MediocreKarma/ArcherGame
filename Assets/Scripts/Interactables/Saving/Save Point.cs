@@ -11,9 +11,9 @@ public class SavePoint : Interactable
         if (IsTriggered) return;
 
         interactor.health = interactor.MaxHealth;
-        saveManager.SaveGame(this);
-        interactPrompt.gameObject.SetActive(false);
         IsTriggered = true;
+        interactPrompt.gameObject.SetActive(false);
+        saveManager.SaveGame(this);
     }
 
     private new void OnTriggerEnter2D(Collider2D collision)
@@ -22,9 +22,9 @@ public class SavePoint : Interactable
         base.OnTriggerEnter2D(collision);
     }
 
-    private new void Start()
+    public override void Init()
     {
-        base.Start();
+        base.Init();
         if (interactAction != null)
         {
             string key = interactAction.action.GetBindingDisplayString();

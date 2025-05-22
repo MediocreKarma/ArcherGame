@@ -35,7 +35,7 @@ public class Player : MonoBehaviour
     public float slowMoSeconds = 1.7f;
     public float damageIFramesSeconds = 2f;
 
-    public bool IsDead { get; private set; } = false;
+    public bool IsDead { get; set; } = false;
 
     private LayerMask platformLayer;
     [SerializeField] private LayerMask groundLayer = -1;
@@ -46,6 +46,9 @@ public class Player : MonoBehaviour
     private Collider2D groundCollider;
 
     public Interactable CurrentInteractable { get; set; }
+
+    public float ElapsedTime { get; set; } = 0f;
+    public bool playerFirstInput = false;
 
     void Start()
     {
@@ -63,6 +66,10 @@ public class Player : MonoBehaviour
     private void Update()
     {
         bool isGrounded = IsGrounded();
+        if (playerFirstInput)
+        {
+            ElapsedTime += Time.deltaTime;
+        }
         TryRotateSprite();
         if (!canDash && isGrounded)
         {
@@ -100,6 +107,10 @@ public class Player : MonoBehaviour
     {
         if (IsDead) return;
         horizontalMovement = context.ReadValue<Vector2>()[0];
+        if (horizontalMovement != 0)
+        {
+            playerFirstInput = true;
+        }
     }
 
     private void Look()
@@ -119,6 +130,10 @@ public class Player : MonoBehaviour
         if (IsDead) return;
         if (context.performed)
         {
+            if (!playerFirstInput)
+            {
+                playerFirstInput = true;
+            }
             bow.StartCharging();
         }
         else if (context.canceled)
@@ -173,7 +188,12 @@ public class Player : MonoBehaviour
     public void Dash(InputAction.CallbackContext context)
     {
         if (IsDead) return;
-        if (context.performed && timeSinceLastDash >= dashCooldown && canDash)
+        if (!context.performed) return;
+        if (!playerFirstInput)
+        {
+            playerFirstInput = true;
+        }
+        if (timeSinceLastDash >= dashCooldown && canDash)
         {
             canDash = false;
             enableMovement = false;
@@ -224,7 +244,15 @@ public class Player : MonoBehaviour
     public void Jump(InputAction.CallbackContext context)
     {
         if (IsDead) return;
-        if (context.performed && timeSinceLastGrounded < groundedForgiveness)
+        if (!context.performed)
+        {
+            return;
+        }
+        if (!playerFirstInput)
+        {
+            playerFirstInput = true;
+        }
+        if (timeSinceLastGrounded < groundedForgiveness)
         {
             timeSinceLastGrounded = groundedForgiveness;
             rb.linearVelocityY = jumpingPower;

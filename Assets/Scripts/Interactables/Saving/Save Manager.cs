@@ -13,8 +13,12 @@ public class SaveManager : MonoBehaviour
     private EnemyAI[] enemies;
     private DoorDeathController doorDeathController;
 
-    private SavePoint previousSavePoint;
-    //public GameSaveData SaveData { get; private set; }
+    private SavePoint[] savePoints;
+    private DoorLever[] doorLevers;
+
+    private string DefaultSavePath => Path.Combine(Application.persistentDataPath, "defaultSave.json");
+
+    private Lever winningLever;
 
     public void SaveGame(SavePoint point)
     {
@@ -26,7 +30,10 @@ public class SaveManager : MonoBehaviour
             },
             enemies = new List<EnemyData>(),
             deathDoors = doorDeathController.GetSaveData(),
-            triggeredSavePoint = point.gameObject.name
+            doorLevers = new List<DoorLeverData>(),
+            savePoints = new List<SavePointData>(),
+            triggeredSavePoint = point.gameObject.name,
+            elapsedTime = player.ElapsedTime
         };
 
         foreach (var enemy in enemies)
@@ -38,8 +45,26 @@ public class SaveManager : MonoBehaviour
             });
         }
 
-        previousSavePoint.IsTriggered = false;
-        previousSavePoint = point;
+        foreach (var lever in doorLevers)
+        {
+            data.doorLevers.Add(new DoorLeverData
+            {
+                leverName = lever.InteractableName,
+                isTriggered = lever.IsTriggered
+            });
+        }
+
+        foreach (var savePoint in savePoints)
+        {
+            data.savePoints.Add(new SavePointData
+            {
+                savepointName = savePoint.InteractableName,
+                isTriggered = savePoint.IsTriggered
+            });
+        }
+
+        // previousSavePoint.IsTriggered = false;
+        // previousSavePoint = point;
 
         string json = JsonUtility.ToJson(data);
         File.WriteAllText(SavePath, json);
@@ -64,30 +89,70 @@ public class SaveManager : MonoBehaviour
             enemies[i].hitpoints = enemies[i].StartHitpoints;
             enemies[i].isAggressive = false;
             var rb = enemies[i].GetComponent<Rigidbody2D>();
+            rb.freezeRotation = true;
             rb.angularVelocity = 0f;
             rb.linearVelocity = Vector2.zero;
         }
-        previousSavePoint = FindObjectsByType<SavePoint>(FindObjectsSortMode.None)
-            .FirstOrDefault(sp => sp.gameObject.name == data.triggeredSavePoint);
-        previousSavePoint.IsTriggered = true;
 
         doorDeathController.LoadSaveData(data.deathDoors);
 
-        previousSavePoint = FindObjectsByType<SavePoint>(FindObjectsSortMode.None)
-            .FirstOrDefault(sp => sp.gameObject.name == data.triggeredSavePoint);
-
-        if (previousSavePoint != null)
+        foreach (var lever in doorLevers)
         {
-            previousSavePoint.IsTriggered = true;
+            var saved = data.doorLevers.Find(l => l.leverName.Equals(lever.InteractableName));
+            if (saved != null)
+            {
+                if (!saved.isTriggered)
+                {
+                    lever.ResetTrigger();
+                }
+            }
+        }
+        foreach (var sp in savePoints)
+        {
+            var saved = data.savePoints.Find(s => s.savepointName == sp.InteractableName);
+            if (saved != null)
+            {
+                Debug.Log("Why was this not found? " + sp.InteractableName);
+                sp.IsTriggered = saved.isTriggered;
+            }
+        }
+
+        player.ElapsedTime = data.elapsedTime;
+        player.playerFirstInput = false;
+        player.IsDead = false;
+        var pRb = player.GetComponent<Rigidbody2D>();
+        pRb.linearVelocity = Vector2.zero;
+        pRb.angularVelocity = 0f;
+
+        if (winningLever.IsTriggered)
+        {
+            winningLever.ResetTrigger();
+        }
+    }
+
+    public void RestoreDefaultSave()
+    {
+        if (File.Exists(DefaultSavePath))
+        {
+            File.Copy(DefaultSavePath, SavePath, true);
+        }
+        else
+        {
+            Debug.LogError($"Default save file not found at {DefaultSavePath}");
         }
     }
 
     public void Init()
     {
+        var winLeverObject = GameObject.Find("Win Lever");
+        winningLever = winLeverObject.GetComponent<Lever>();
         enemies = FindObjectsByType<EnemyAI>(FindObjectsSortMode.InstanceID);
+        savePoints = FindObjectsByType<SavePoint>(FindObjectsSortMode.InstanceID);
+        doorLevers = FindObjectsByType<DoorLever>(FindObjectsSortMode.InstanceID);
         player = FindFirstObjectByType<Player>();
-        previousSavePoint = GameObject.Find("Save Point #0").GetComponent<SavePoint>();
         doorDeathController = FindFirstObjectByType<DoorDeathController>();
-        SaveGame(previousSavePoint);
+        var defaultSave = GameObject.Find("Save Point #0").GetComponent<SavePoint>();
+        SaveGame(defaultSave);
+        File.Copy(SavePath, DefaultSavePath, true);
     }
 }

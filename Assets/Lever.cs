@@ -1,46 +1,30 @@
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
-public class DoorLever : Interactable
+public class Lever : Interactable
 {
-    [SerializeField] private List<GameObject> doors; // The door to be opened
-
+    public UnityEvent triggerEvent;
+    public UnityEvent resetEvent;
     public bool IsTriggered { get; set; } = false; // To prevent multiple triggers
 
     public override void Trigger(Player interactor)
     {
-        if (IsTriggered)
-        {
-            return;
-        }
-        IsTriggered = true;
-        foreach (var door in doors)
-        {
-            door.SetActive(false);
-        }
+        triggerEvent.Invoke(); 
         Vector3 newScale = transform.localScale;
         newScale.x *= -1;
         transform.localScale = newScale;
         interactPrompt.gameObject.SetActive(false);
+        IsTriggered = true;
     }
 
     public void ResetTrigger()
     {
-        IsTriggered = false;
-        foreach (var door in doors)
-        {
-            door.SetActive(true);
-        }
+        resetEvent.Invoke();
         Vector3 newScale = transform.localScale;
         newScale.x *= -1;
         transform.localScale = newScale;
-    }
-
-    private new void OnTriggerEnter2D(Collider2D collision)
-    {
-        if (IsTriggered) return;
-        base.OnTriggerEnter2D(collision);
+        IsTriggered = false;
     }
 
     public override void Init()
@@ -51,5 +35,10 @@ public class DoorLever : Interactable
             string key = interactAction.action.GetBindingDisplayString();
             interactPrompt.text = $"Press [{key}]";
         }
+    }
+    private new void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (IsTriggered) return;
+        base.OnTriggerEnter2D(collision);
     }
 }

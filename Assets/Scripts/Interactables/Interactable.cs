@@ -8,6 +8,11 @@ public abstract class Interactable : MonoBehaviour
     [SerializeField] protected InputActionReference interactAction;
 
     protected TextMeshPro interactPrompt;
+    protected Transform popupTransform;
+
+    public string InteractableName { get; private set; }
+
+    private Player player;
 
     public abstract void Trigger(Player interactor);
 
@@ -15,9 +20,6 @@ public abstract class Interactable : MonoBehaviour
     {
         if (!collision.CompareTag("Player"))
         {
-            return;
-        }
-        if (!collision.TryGetComponent<Player>(out var player)) {
             return;
         }
         player.CurrentInteractable = this;
@@ -30,17 +32,19 @@ public abstract class Interactable : MonoBehaviour
         {
             return;
         }
-        collision.GetComponent<Player>().CurrentInteractable = null;
+        player.CurrentInteractable = null;
         interactPrompt.gameObject.SetActive(false);
     }
-
-    protected void Start()
+    public virtual void Init()
     {
+        player = FindFirstObjectByType<Player>();
+        InteractableName = gameObject.name;
         if (interactAction != null)
         {
-            GameObject popup = new("SavePointPrompt");
+            GameObject popup = new("Interact Popup");
             popup.transform.SetParent(transform);
             popup.transform.localPosition = new Vector3(0, -1.5f, 0);
+            popupTransform = popup.transform;
             interactPrompt = popup.AddComponent<TextMeshPro>();
             interactPrompt.fontSize = 5f;
             interactPrompt.color = Color.white;

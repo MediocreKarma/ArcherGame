@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,10 +21,25 @@ public class PlayerUI : MonoBehaviour
     [SerializeField] private Color dashBlockedColor = new(1f, 1f, 1f, 0.3f); // faded white
     [SerializeField] private Color dashCooldownColor = Color.gray;
 
+    [SerializeField] private GameObject restartText;
+
     void Update()
     {
         UpdateHealthBar();
         UpdateDashBar();
+        UpdateRestart();
+    }
+
+    private void UpdateRestart()
+    {
+        if (player.IsDead)
+        {
+            restartText.SetActive(true);
+        }
+        else
+        {
+            restartText.SetActive(false);
+        }
     }
 
     private void UpdateHealthBar()

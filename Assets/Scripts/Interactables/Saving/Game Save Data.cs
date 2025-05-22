@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -23,10 +24,27 @@ public class DoorDeathData
 }
 
 [System.Serializable]
+public class DoorLeverData
+{
+    public string leverName;
+    public bool isTriggered;
+}
+
+[System.Serializable]
+public class SavePointData
+{
+    public string savepointName;
+    public bool isTriggered;
+}
+
+[System.Serializable]
 public class GameSaveData
 {
     public PlayerData player;
     public List<EnemyData> enemies;
     public List<DoorDeathData> deathDoors;
+    public List<DoorLeverData> doorLevers;
+    public List<SavePointData> savePoints;
     public string triggeredSavePoint;
+    public float elapsedTime;
 }

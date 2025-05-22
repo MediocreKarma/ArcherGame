@@ -42,7 +42,6 @@ public class IslandTopDetector : MonoBehaviour
                 }
             }
         }
-        Debug.Log($"Found {horizontalEdges.Count} horizontal edges in the collider.");
     }
 
     private void FindVerticalEdges()
@@ -65,8 +64,6 @@ public class IslandTopDetector : MonoBehaviour
                 }
             }
         }
-
-        Debug.Log($"Found {verticalEdges.Count} vertical edges in the collider.");
     }
 
     private EdgeCornerInfo AnalyzeCorner(Vector2 corner)

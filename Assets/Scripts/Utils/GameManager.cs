@@ -7,6 +7,12 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        var interactables = FindObjectsByType<Interactable>(FindObjectsSortMode.None);
+        foreach (var interactable in interactables)
+        {
+            interactable.Init();
+        }
+
         var deathDoors = FindObjectsByType<DoorDeath>(FindObjectsSortMode.None);
         foreach (var door in deathDoors)
         {

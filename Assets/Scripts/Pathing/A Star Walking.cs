@@ -122,12 +122,25 @@ public class PlatformPathGraph : PathingAlgorithm
                 float t = (float)i / (nodeCount - 1);
                 Vector2 pos = Vector2.Lerp(surface.start, surface.end, t);
                 pos.y += 0.05f;
+                if (i == 0 || i == nodeCount - 1)
+                {
+                    Vector2 checkCenter = pos + Vector2.up * 0.25f;
+                    Vector2 boxSize = new(0.1f, 0.1f);
+
+                    int levelMask = LayerMask.GetMask("Level");
+                    bool blocked = Physics2D.OverlapBox(checkCenter, boxSize, 0f, levelMask);
+                    Debug.Log($"Was here, and blocked was {blocked}");
+                    if (blocked)
+                    {
+                        continue;
+                    }
+                }
                 nodes.Add(new Node(pos));
                 if (nodeType == NodeSpecialType.MiddlePlatform && i != 0 && i < nodeCount - 1)
                 {
                     middlePlatformNodes.Add(nodes.Last());
                 }
-                if (nodeType == NodeSpecialType.Corner && (i == 0 || i == nodeCount - 1))
+                if ((i == 0 || i == nodeCount - 1) && nodeType == NodeSpecialType.Corner)
                 {
                     cornerNodes.Add(nodes.Last());
                 }
