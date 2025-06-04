@@ -13,6 +13,7 @@ public class RestartGame : MonoBehaviour
         SaveManager saveManager = FindFirstObjectByType<SaveManager>();
         if (saveManager != null)
         {
+            saveManager.ResetTimer = true;
             saveManager.RestoreDefaultSave();
         }
     }

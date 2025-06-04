@@ -1,35 +1,20 @@
-using Mono.Cecil.Cil;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using Unity.Collections;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.UIElements;
 
 public class WalkingEnemyAI : EnemyAI
 {
     private PlatformPathGraph.WalkerProperties walkerProperties;
+    public PlatformPathGraph.WalkerProperties Properties => walkerProperties;
     private PlatformPathGraph platformPathingAlgorithm;
     [SerializeField] private LayerMask groundLayerMask;
+    public float maxJumpHeight = 10f;
 
-    private new void Start()
+    private void Awake()
     {
-        base.Start();
-        rb.excludeLayers |= LayerMask.GetMask("Platform");
-        platformPathingAlgorithm = FindFirstObjectByType<PlatformPathGraph>();
         Collider2D[] colliders = GetComponentsInChildren<Collider2D>();
-        if (base.pathingAlgorithm is PlatformPathGraph graph)
-        {
-            platformPathingAlgorithm = graph;
-        }
-        else
-        {
-            return;
-        }
         if (colliders.Length == 0)
         {
-            walkerProperties = new PlatformPathGraph.WalkerProperties(0.1f, 0.1f, 10f, speed);
+            walkerProperties = new PlatformPathGraph.WalkerProperties(0.1f, 0.1f, maxJumpHeight, speed);
         }
         else
         {
@@ -38,13 +23,24 @@ public class WalkingEnemyAI : EnemyAI
             {
                 combinedBounds.Encapsulate(colliders[i].bounds);
             }
-            Vector2 center = transform.position;
-            float top = combinedBounds.max.y - center.y;
-            float bottom = center.y - combinedBounds.min.y;
-            float height = top - bottom;
             float width = combinedBounds.size.x;
-            walkerProperties = new PlatformPathGraph.WalkerProperties(width, height, 10f, speed);
+            float height = combinedBounds.size.y;
+            walkerProperties = new PlatformPathGraph.WalkerProperties(width, height, maxJumpHeight, speed);
             Debug.Log($"Collider bounds: width: {width}, height: {height}");
+        }
+    }
+
+    private new void Start()
+    {
+        base.Start();
+        rb.excludeLayers |= LayerMask.GetMask("Platform");
+        if (base.pathingAlgorithm is PlatformPathGraph graph)
+        {
+            platformPathingAlgorithm = graph;
+        }
+        else
+        {
+            return;
         }
         pathIndex = 0;
     }

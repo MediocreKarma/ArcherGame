@@ -231,12 +231,12 @@ public class Player : MonoBehaviour
     private bool IsGrounded()
     {
         RaycastHit2D hit = Physics2D.BoxCast(
-            groundCollider.bounds.center, 
+            new Vector2(groundCollider.bounds.center.x, groundCollider.bounds.min.y), 
             groundCollider.bounds.size, 
             0f, 
             Vector2.down, 
             0.05f, 
-            LayerMask.GetMask("Level", "Platform")
+            groundLayer
         );
         return hit.collider != null;
     }
@@ -365,6 +365,8 @@ public class Player : MonoBehaviour
         health = MaxHealth;
         rb.freezeRotation = true;
         enableMovement = true;
+        rb.linearVelocity = Vector2.zero;
+        horizontalMovement = 0;
         IsDead = false;
         FindFirstObjectByType<SaveManager>().LoadGame();
     }

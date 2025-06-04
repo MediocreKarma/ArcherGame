@@ -20,6 +20,8 @@ public class SaveManager : MonoBehaviour
 
     private Lever winningLever;
 
+    public bool ResetTimer = false;
+
     public void SaveGame(SavePoint point)
     {
         GameSaveData data = new()
@@ -125,6 +127,11 @@ public class SaveManager : MonoBehaviour
         {
             winningLever.ResetTrigger();
         }
+        if (ResetTimer)
+        {
+            player.ElapsedTime = 0f;
+            ResetTimer = false;
+        }
     }
 
     public void RestoreDefaultSave()
@@ -147,6 +154,7 @@ public class SaveManager : MonoBehaviour
         savePoints = FindObjectsByType<SavePoint>(FindObjectsSortMode.InstanceID);
         doorLevers = FindObjectsByType<DoorLever>(FindObjectsSortMode.InstanceID);
         player = FindFirstObjectByType<Player>();
+        Debug.Log("Inited player");
         doorDeathController = FindFirstObjectByType<DoorDeathController>();
         var defaultSave = GameObject.Find("Save Point #0").GetComponent<SavePoint>();
         SaveGame(defaultSave);

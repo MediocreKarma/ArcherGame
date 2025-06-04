@@ -37,6 +37,9 @@ public abstract class EnemyAI : MonoBehaviour
 
     public PathingAlgorithm pathingAlgorithm;
     protected string id;
+
+    public bool IsTarget = false;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     protected virtual void Start()
     {
@@ -183,15 +186,22 @@ public abstract class EnemyAI : MonoBehaviour
         hitpoints = 0;
         OnDeath?.Invoke();
         isAlive = false;
-        rb.freezeRotation = false;
+        rb.freezeRotation = IsTarget;
         rb.AddForce(collision.transform.right * 2f, ForceMode2D.Impulse);
         rb.AddTorque(2f, ForceMode2D.Impulse);
         Physics2D.IgnoreCollision(GetComponentInChildren<Collider2D>(), player.GetComponent<Collider2D>(), true);
-        StartCoroutine(DestroySelf(15f));
+        if (!IsTarget)
+        {
+            StartCoroutine(DestroySelf(15f));
+        }
     }
 
     private void Stagger(Collision2D collision)
     {
+        if (IsTarget)
+        {
+            return; 
+        }
         rb.AddForce(collision.transform.right * 0.8f, ForceMode2D.Impulse);
         enableMovement = false;
         StartCoroutine(EnableMovement(0.5f));

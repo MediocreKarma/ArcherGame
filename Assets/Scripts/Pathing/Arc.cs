@@ -33,4 +33,19 @@ public class Arc
         }
         return points;
     }
+
+    public float Distance(int segments = 10)
+    {
+        if (segments < 1)
+        {
+            segments = 1; // Ensure at least one segment
+        }
+        float distance = 0f;
+        List<Vector2> points = GenerateJumpArcPoints(segments);
+        for (int i = 0; i < points.Count - 1; i++)
+        {
+            distance += Vector2.Distance(points[i], points[i + 1]);
+        }
+        return distance;
+    }
 }
