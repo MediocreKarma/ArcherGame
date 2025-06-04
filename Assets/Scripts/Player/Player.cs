@@ -50,6 +50,11 @@ public class Player : MonoBehaviour
     public float ElapsedTime { get; set; } = 0f;
     public bool playerFirstInput = false;
 
+    [SerializeField] private GameObject head;
+    [SerializeField] private GameObject body;
+
+    private bool isHeadFacingRight = true; 
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -117,6 +122,7 @@ public class Player : MonoBehaviour
     {
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         bow.AimTowards(mousePosition);
+        TryRotateHead(mousePosition);
     }
 
     public void LookCallback(InputAction.CallbackContext _)
@@ -197,7 +203,7 @@ public class Player : MonoBehaviour
         {
             canDash = false;
             enableMovement = false;
-            var dir = isFacingRight ? Vector2.left : Vector2.right;
+            var dir = isFacingRight ? Vector2.right : Vector2.left;
             timeSinceLastDash = 0;
             rb.AddForce(dir * 40f, ForceMode2D.Impulse);
             StartCoroutine(DashIFrames(0.1f));
@@ -217,15 +223,29 @@ public class Player : MonoBehaviour
     private void TryRotateSprite()
     {
         if (IsDead) return;
-        if ((isFacingRight && horizontalMovement > 0f) || (!isFacingRight && horizontalMovement < 0f))
+        if ((isFacingRight && horizontalMovement < 0f) || (!isFacingRight && horizontalMovement > 0f))
         {
             isFacingRight = !isFacingRight;
-            Vector3 localScale = transform.localScale;
+            Vector3 localScale = body.transform.localScale;
             localScale.x *= -1f;
-            transform.localScale = localScale;
-            bow.RotateSprite();
-            Look();
+            body.transform.localScale = localScale;
+            //bow.RotateSprite();
+            //Look();
         }
+    }
+
+    private void TryRotateHead(Vector2 mousePosition)
+    {
+        if (IsDead) return;
+        float dx = mousePosition.x - head.transform.position.x;
+        if ((isHeadFacingRight && dx < 0) || (!isHeadFacingRight && dx > 0))
+        {
+            isHeadFacingRight = !isHeadFacingRight;
+            Vector3 localScale = head.transform.localScale;
+            localScale.x *= -1f;
+            head.transform.localScale = localScale;
+        }
+
     }
 
     private bool IsGrounded()
