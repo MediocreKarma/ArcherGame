@@ -49,7 +49,7 @@ public class Bow : MonoBehaviour
         Vector3 localOffset = transform.InverseTransformDirection(-transform.right) * pullDistance;
         if (!player.IsFacingRight())
         {
-            localOffset.x *= -1;
+            //localOffset.x *= -1;
         }
         arrow.transform.localPosition = arrowTransformChargeOrigin + localOffset;
     }
