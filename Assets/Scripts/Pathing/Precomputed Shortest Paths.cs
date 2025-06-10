@@ -1,11 +1,12 @@
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Text;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
-public class AStar : PathingAlgorithm
+public class PrecomputedShortestPathAlgorithm : PathingAlgorithm
 {
     public CompositeCollider2D targetCollider;
     public float raycastOffset = 0.01f;
@@ -114,9 +115,10 @@ public class AStar : PathingAlgorithm
             (outsideCorners, insideCorners) = (insideCorners, outsideCorners);
         }
 
+        startVisible = new Vector2[outsideCorners.Count];
+        goalVisible = new Vector2[outsideCorners.Count];
+
 #if UNITY_EDITOR
-
-
         foreach (var pt in insideCorners)
         {
             DebugDrawCircle(pt, 0.02f, Color.red, 1000f);
@@ -164,13 +166,10 @@ public class AStar : PathingAlgorithm
 
     public bool IsVisible(Vector2 a, Vector2 b)
     {
-        var hits = Physics2D.LinecastAll(a + Vector2.up * raycastOffset, b + Vector2.up * raycastOffset, 1 << targetCollider.gameObject.layer);
-        foreach (var hit in hits)
+        var hits = Physics2D.Linecast(a + Vector2.up * raycastOffset, b + Vector2.up * raycastOffset, 1 << targetCollider.gameObject.layer);
+        if (hits.collider == targetCollider)
         {
-            if (hit.collider == targetCollider)
-            {
-                return false;
-            }
+            return false;
         }
         return true;
     }
@@ -253,56 +252,49 @@ public class AStar : PathingAlgorithm
         }
     }
 
-    public override List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PatherProperties properties = null)
-    {
-        if (IsVisible(start, goal))
-        {
-            return new List<Vector2> { start, goal };
-        }
+    private Vector2[] startVisible, goalVisible;
+    private int startVisibleCount = 0, goalVisibleCount = 0;
 
-        bool isOutside = false;
+    private bool IsOutside(Vector2 point)
+    {
         foreach (var corner in outsideCorners)
         {
-            if (IsVisible(start, corner))
+            if (IsVisible(point, corner))
             {
-                isOutside = true;
-                break;
+                return true;
             }
         }
+        return false;
+    }
 
-        var corners = insideCorners;
-        var shortestPaths = insideShortestPaths;
-        var pathLengths = insidePathLengths;
-        if (isOutside)
-        {
-            corners = outsideCorners;
-            shortestPaths = outsideShortestPaths;
-            pathLengths = outsidePathLengths;
-        }
-
-        var startVisible = new List<Vector2>();
-        var goalVisible = new List<Vector2>();
-
+    private void LoadStartAndGoalLists(Vector2 start, Vector2 goal, List<Vector2> corners)
+    {
+        goalVisibleCount = 0;
+        startVisibleCount = 0;
         foreach (var corner in corners)
         {
             if (IsVisible(start, corner))
-                startVisible.Add(corner);
+                startVisible[startVisibleCount++] = corner;
             if (IsVisible(goal, corner))
-                goalVisible.Add(corner);
+                goalVisible[goalVisibleCount++] = corner;
         }
+    }
 
+    private (Vector2, Vector2) BestFromAndTo(Vector2 start, Vector2 goal, Dictionary<(Vector2, Vector2), float> pathLengths)
+    {
         float bestCost = Mathf.Infinity;
         Vector2 bestFrom = Vector2.zero;
         Vector2 bestTo = Vector2.zero;
 
-        foreach (var from in startVisible)
+        for (int i = 0; i < startVisibleCount; i++)
         {
-            foreach (var to in goalVisible)
+            var from = startVisible[i];
+            for (int j = 0; j < goalVisibleCount; j++)
             {
+                var to = goalVisible[j];
                 float cost = Vector2.Distance(start, from) +
                             pathLengths.GetValueOrDefault((from, to), 0) +
                             Vector2.Distance(to, goal);
-
                 if (cost < bestCost)
                 {
                     bestCost = cost;
@@ -311,6 +303,36 @@ public class AStar : PathingAlgorithm
                 }
             }
         }
+
+        return (bestFrom, bestTo);
+    }
+
+    public override List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PatherProperties _properties = null)
+    {
+        if (IsVisible(start, goal))
+        {
+            return new List<Vector2> { start, goal };
+        }
+
+        bool isOutsideStart = IsOutside(start);
+        bool isOutsideGoal = IsOutside(goal);
+        if (isOutsideStart != isOutsideGoal)
+        {
+            return new List<Vector2> { start, goal };
+        }
+
+        var corners = insideCorners;
+        var shortestPaths = insideShortestPaths;
+        var pathLengths = insidePathLengths;
+        if (isOutsideStart)
+        {
+            corners = outsideCorners;
+            shortestPaths = outsideShortestPaths;
+            pathLengths = outsidePathLengths;
+        }
+
+        LoadStartAndGoalLists(start, goal, corners);
+        (Vector2 bestFrom, Vector2 bestTo) = BestFromAndTo(start, goal, pathLengths);
 
         List<Vector2> bestPath = new() { start };
         if (bestFrom == bestTo)
@@ -325,7 +347,51 @@ public class AStar : PathingAlgorithm
         return bestPath;
     }
 
-    public override bool HasPath(Vector2 start, Vector2 goal, PatherProperties properties)
+    public List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PatherProperties _, List<Vector2> buffer)
+    {
+        buffer.Clear();
+        if (IsVisible(start, goal))
+        {
+            buffer.Add(start);
+            buffer.Add(goal);
+            return buffer;
+        }
+        bool isOutsideStart = IsOutside(start);
+        bool isOutsideGoal = IsOutside(goal);
+        if (isOutsideStart != isOutsideGoal)
+        {
+            buffer.Add(start);
+            buffer.Add(goal);
+            return buffer;
+        }
+
+        var corners = insideCorners;
+        var shortestPaths = insideShortestPaths;
+        var pathLengths = insidePathLengths;
+        if (isOutsideStart)
+        {
+            corners = outsideCorners;
+            shortestPaths = outsideShortestPaths;
+            pathLengths = outsidePathLengths;
+        }
+
+        LoadStartAndGoalLists(start, goal, corners);
+        (Vector2 bestFrom, Vector2 bestTo) = BestFromAndTo(start, goal, pathLengths);
+
+        buffer.Add(start);
+        if (bestFrom == bestTo)
+        {
+            buffer.Add(bestFrom);
+        }
+        else
+        {
+            buffer.AddRange(shortestPaths[(bestFrom, bestTo)]);
+        }
+        buffer.Add(goal);
+        return buffer;
+    }
+
+    public override bool HasPath(Vector2 start, Vector2 goal, PatherProperties _properties)
     {
         if (IsVisible(start, goal))
         {

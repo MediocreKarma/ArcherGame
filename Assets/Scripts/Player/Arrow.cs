@@ -63,6 +63,7 @@ public class Arrow : MonoBehaviour
     }
 
     public float jumpTime = 0.5f;
+    private static readonly WaitForSeconds arrowReturningWait = new(0.067f);
 
     private IEnumerator ReturnSequence()
     {
@@ -94,7 +95,7 @@ public class Arrow : MonoBehaviour
             currentTargetPosition = bowParent.transform.TransformPoint(originalPosition);
             returnDirection = (currentTargetPosition - transform.position).normalized;
             rb.linearVelocity = returnDirection * retrieveSpeed;
-            yield return null;
+            yield return arrowReturningWait;
         }
     }
 
@@ -104,10 +105,7 @@ public class Arrow : MonoBehaviour
         {
             return -transform.TransformDirection(Vector3.right);
         }
-
-        Collider2D[] levelColliders = Physics2D.OverlapCircleAll(transform.position, 1f, LayerMask.GetMask("Level"));
-        Collider2D closestCollider = levelColliders.Length > 0 ? levelColliders[0] : null;
-
+        Collider2D closestCollider = Physics2D.OverlapCircle(transform.position, 1f, LayerMask.GetMask("Level"));
         if (closestCollider != null)
         {
             Vector2 closestPoint = closestCollider.ClosestPoint(transform.position);
@@ -125,6 +123,8 @@ public class Arrow : MonoBehaviour
         Physics2D.IgnoreCollision(collider, arrowCollider, false);
     }
 
+    private static readonly Vector3 defaultRearmedBowRbTransformLocalScale = new(1, 1.5f, 1);
+
     public void RearmingBow()
     {
         rb.linearVelocity = Vector2.zero;
@@ -136,7 +136,7 @@ public class Arrow : MonoBehaviour
         isLaunched = false;
         isJumping = false;
         hasHit = false;
-        rb.transform.localScale = new Vector3(1, 1.5f, 1);
+        rb.transform.localScale = defaultRearmedBowRbTransformLocalScale;
         rb.gravityScale = 1f;
     }
 
@@ -147,7 +147,7 @@ public class Arrow : MonoBehaviour
         originalPosition = transform.localPosition;
         bowParent = transform.parent;
         Sticking = GetComponent<ArrowSticking>();
-        pathing = FindFirstObjectByType<AStar>();
+        pathing = FindFirstObjectByType<PrecomputedShortestPathAlgorithm>();
         arrowCollider = GetComponentInChildren<Collider2D>();
     }
 

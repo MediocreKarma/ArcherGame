@@ -142,7 +142,7 @@ public abstract class EnemyAI : MonoBehaviour
                 Debug.Log("Arrow already stuck to enemy at " + Time.frameCount);
                 return;
             }
-            arrow.StickTo(GetComponent<Rigidbody2D>(), collision);
+            arrow.StickTo(rb, collision);
             hasArrowStuck = true;
             for (int i = 0; i < collision.contactCount; i++)
             {

@@ -5,12 +5,21 @@ using UnityEngine.UIElements;
 public class FlyingEnemyAI : EnemyAI
 {
     private new CircleCollider2D collider;
+    private PrecomputedShortestPathAlgorithm flyingPathingAlgorithm;
 
     private new void Start()
     {
         base.Start();
         rb.excludeLayers |= LayerMask.GetMask("Platform");
         collider = GetComponentInChildren<CircleCollider2D>();
+        if (pathingAlgorithm is PrecomputedShortestPathAlgorithm algorithm)
+        {
+            flyingPathingAlgorithm = algorithm;
+        }
+        else
+        {
+            Debug.LogError("FlyingEnemyAI requires a PrecomputedShortestPathAlgorithm for pathfinding.");
+        }
     }
 
     protected override void PerformPathUpdate()
@@ -19,18 +28,13 @@ public class FlyingEnemyAI : EnemyAI
         {
             return;
         }
-        List<Vector2> newPath;
         Vector2 start = rb.position;
+        Vector2 goal = StartPosition;
         if (isAggressive)
         {
-            Vector2 goal = GetTargetPosition();
-            newPath = pathingAlgorithm.ShortestPath(start, goal);
+            goal = GetTargetPosition();
         }
-        else
-        {
-            Vector2 goal = StartPosition;
-            newPath = pathingAlgorithm.ShortestPath(start, goal);
-        }
+        List<Vector2> newPath = flyingPathingAlgorithm.ShortestPath(start, goal, null, currentPath);
 
         if (newPath != null)
         {

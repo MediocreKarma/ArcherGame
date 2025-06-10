@@ -22,7 +22,10 @@ public class Player : MonoBehaviour
     public bool CanDash => canDash;
 
     public float groundedForgiveness = 0.075f;
-    private float timeSinceLastGrounded = 0.075f;
+    private float timeSinceLastGrounded = 5f;
+
+    public float jumpBufferingForgiveness = 0.075f;
+    private float timeSinceLastJumpInput = 5f;
 
     private bool isFacingRight = true;
 
@@ -53,7 +56,8 @@ public class Player : MonoBehaviour
     [SerializeField] private GameObject head;
     [SerializeField] private GameObject body;
 
-    private bool isHeadFacingRight = true; 
+    private bool isHeadFacingRight = true;
+    public float groundedCheckHeight = 5f;
 
     void Start()
     {
@@ -66,6 +70,8 @@ public class Player : MonoBehaviour
         }
         platformLayer = LayerMask.GetMask("Platform");
         MaxHealth = health;
+        groundedCheckSize = new Vector2(groundCollider.bounds.size.x, groundedCheckHeight);
+        bottomCenter = new();
     }
 
     private void Update()
@@ -92,14 +98,23 @@ public class Player : MonoBehaviour
         {
             timeSinceLastGrounded += Time.deltaTime;
         }
+        if (timeSinceLastJumpInput < jumpBufferingForgiveness)
+        {
+            timeSinceLastJumpInput += Time.deltaTime;
+        }
     }
 
     private void FixedUpdate()
     {
         if (IsDead) return;
-        if (enableMovement)
+        if (!enableMovement)
         {
-            rb.linearVelocityX = horizontalMovement * horizontalSpeed;
+            return;
+        }
+        rb.linearVelocityX = horizontalMovement * horizontalSpeed;
+        if (timeSinceLastJumpInput < jumpBufferingForgiveness)
+        {
+            PerformJump();
         }
     }
 
@@ -157,16 +172,21 @@ public class Player : MonoBehaviour
         }
     }
 
+    private Vector2 leftOrigin = new();
+    private Vector2 rightOrigin = new();
+
     public void DropThroughPlatform(InputAction.CallbackContext context)
     {
         if (IsDead) return;
         if (context.performed && !isDropping && IsGrounded())
         {
-            Bounds bounds = GetComponent<Collider2D>().bounds;
+            Bounds bounds = groundCollider.bounds;
             float rayLength = 0.2f;
 
-            Vector2 leftOrigin = new(bounds.min.x, bounds.min.y);
-            Vector2 rightOrigin = new(bounds.max.x, bounds.min.y);
+            leftOrigin.x = bounds.min.x;
+            leftOrigin.y = bounds.min.y;
+            rightOrigin.x = bounds.max.x;
+            rightOrigin.y = bounds.min.y;
 
             RaycastHit2D leftHit = Physics2D.Raycast(leftOrigin, Vector2.down, rayLength, platformLayer);
             RaycastHit2D rightHit = Physics2D.Raycast(rightOrigin, Vector2.down, rayLength, platformLayer);
@@ -248,14 +268,19 @@ public class Player : MonoBehaviour
 
     }
 
+    private Vector2 bottomCenter;
+    private Vector2 groundedCheckSize;
+
     private bool IsGrounded()
     {
+        bottomCenter.x = groundCollider.bounds.center.x;
+        bottomCenter.y = groundCollider.bounds.min.y;
         RaycastHit2D hit = Physics2D.BoxCast(
-            new Vector2(groundCollider.bounds.center.x, groundCollider.bounds.min.y), 
-            groundCollider.bounds.size, 
+            bottomCenter,
+            groundedCheckSize,
             0f, 
             Vector2.down, 
-            0.05f, 
+            0f, 
             groundLayer
         );
         return hit.collider != null;
@@ -263,15 +288,19 @@ public class Player : MonoBehaviour
 
     public void Jump(InputAction.CallbackContext context)
     {
+        if (!context.performed) return;
         if (IsDead) return;
-        if (!context.performed)
-        {
-            return;
-        }
+        timeSinceLastJumpInput = 0f;
+    }
+
+    public void PerformJump()
+    {
+        timeSinceLastJumpInput = jumpBufferingForgiveness;
         if (!playerFirstInput)
         {
             playerFirstInput = true;
         }
+        Debug.Log($"Jumping! Time since last grounded: {timeSinceLastGrounded} at frame {Time.frameCount}");
         if (timeSinceLastGrounded < groundedForgiveness)
         {
             timeSinceLastGrounded = groundedForgiveness;
@@ -306,7 +335,6 @@ public class Player : MonoBehaviour
         rb.freezeRotation = false;
         enableMovement = false;
         IsDead = true;
-        Physics2D.IgnoreCollision(GetComponentInChildren<Collider2D>(), GetComponent<Collider2D>(), true);
         yield return new WaitForSeconds(seconds);
     }
 

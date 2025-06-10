@@ -182,7 +182,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!50 &40152596
 Rigidbody2D:
   serializedVersion: 5
@@ -427,11 +427,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad5ab0edadf898f449844e2c588c8e40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  health: 10
+  health: 2
   horizontalSpeed: 15
   jumpingPower: 24
   dashCooldown: 1
   groundedForgiveness: 0.075
+  jumpBufferingForgiveness: 0.075
   slowMoSeconds: 1.7
   damageIFramesSeconds: 2
   groundLayer:
@@ -441,6 +442,7 @@ MonoBehaviour:
   playerFirstInput: 0
   head: {fileID: 1891906111}
   body: {fileID: 1270258158}
+  groundedCheckHeight: 5
   restartHoldTime: 1.2
 --- !u!58 &104822448
 CircleCollider2D:
@@ -1239,7 +1241,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!50 &138651753
 Rigidbody2D:
   serializedVersion: 5

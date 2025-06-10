@@ -4,6 +4,7 @@ using System.Linq;
 using Unity.VisualScripting;
 using System.Collections.Generic;
 using UnityEngine.InputSystem.XR;
+using System.Drawing;
 
 public class SaveManager : MonoBehaviour
 {
@@ -22,21 +23,17 @@ public class SaveManager : MonoBehaviour
 
     public bool ResetTimer = false;
 
+    GameSaveData data;
+
     public void SaveGame(SavePoint point)
     {
-        GameSaveData data = new()
-        {
-            player = new PlayerData
-            {
-                position = player.transform.position,
-            },
-            enemies = new List<EnemyData>(),
-            deathDoors = doorDeathController.GetSaveData(),
-            doorLevers = new List<DoorLeverData>(),
-            savePoints = new List<SavePointData>(),
-            triggeredSavePoint = point.gameObject.name,
-            elapsedTime = player.ElapsedTime
-        };
+        data.player.position = player.transform.position;
+        data.enemies.Clear();
+        data.deathDoors = doorDeathController.GetSaveData();
+        data.doorLevers.Clear();
+        data.savePoints.Clear();
+        data.triggeredSavePoint = point.gameObject.name;
+        data.elapsedTime = player.ElapsedTime;
 
         foreach (var enemy in enemies)
         {
@@ -58,6 +55,7 @@ public class SaveManager : MonoBehaviour
 
         foreach (var savePoint in savePoints)
         {
+            //Debug.Log($"Saving save point: {savePoint.InteractableName}, triggered: {savePoint.IsTriggered}");
             data.savePoints.Add(new SavePointData
             {
                 savepointName = savePoint.InteractableName,
@@ -108,15 +106,12 @@ public class SaveManager : MonoBehaviour
         }
         foreach (var sp in savePoints)
         {
-            var saved = data.savePoints.Find(s => s.savepointName == sp.InteractableName);
+            var saved = data.savePoints.Find(s => s.savepointName.Equals(sp.InteractableName));
             if (saved != null)
             {
-                Debug.Log("Why was this not found? " + sp.InteractableName);
                 sp.IsTriggered = saved.isTriggered;
             }
         }
-
-        player.ElapsedTime = data.elapsedTime;
         player.playerFirstInput = false;
         player.IsDead = false;
         var pRb = player.GetComponent<Rigidbody2D>();
@@ -156,7 +151,21 @@ public class SaveManager : MonoBehaviour
         player = FindFirstObjectByType<Player>();
         Debug.Log("Inited player");
         doorDeathController = FindFirstObjectByType<DoorDeathController>();
-        var defaultSave = GameObject.Find("Save Point #0").GetComponent<SavePoint>();
+        const string defaultSavePoint = "Save Point #0";
+        var defaultSave = GameObject.Find(defaultSavePoint).GetComponent<SavePoint>();
+        data = new()
+        {
+            player = new PlayerData
+            {
+                position = player.transform.position,
+            },
+            enemies = new List<EnemyData>(),
+            deathDoors = doorDeathController.GetSaveData(),
+            doorLevers = new List<DoorLeverData>(),
+            savePoints = new List<SavePointData>(),
+            triggeredSavePoint = null,
+            elapsedTime = player.ElapsedTime
+        };
         SaveGame(defaultSave);
         File.Copy(SavePath, DefaultSavePath, true);
     }

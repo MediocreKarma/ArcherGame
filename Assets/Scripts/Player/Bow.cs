@@ -47,10 +47,6 @@ public class Bow : MonoBehaviour
         float chargeRatio = chargeTime / maxChargeTime;
         float pullDistance = Mathf.Lerp(0, arrowMaxChargingTravel, chargeRatio);
         Vector3 localOffset = transform.InverseTransformDirection(-transform.right) * pullDistance;
-        if (!player.IsFacingRight())
-        {
-            //localOffset.x *= -1;
-        }
         arrow.transform.localPosition = arrowTransformChargeOrigin + localOffset;
     }
 
