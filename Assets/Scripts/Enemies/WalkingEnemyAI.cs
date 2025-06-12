@@ -83,54 +83,22 @@ public class WalkingEnemyAI : EnemyAI
 
     protected override void PerformPathUpdate()
     {
-        //if (!IsGrounded())
-        //{
-        //    return;
-        //}
+        if (!IsGrounded())
+        {
+            return;
+        }
         List<Vector2> newPath;
         Vector2 start = rb.position;
+        Vector2 goal = StartPosition; 
         if (isAggressive)
         {
-            Vector2 goal = GetTargetPosition();
-            newPath = platformPathingAlgorithm.ShortestPath(start, goal, walkerProperties);
+            goal = GetTargetPosition();
         }
-        else
+        newPath = platformPathingAlgorithm.ShortestPath(start, goal, walkerProperties, currentPath);
+        if (newPath != null)
         {
-            Vector2 goal = StartPosition;
-            newPath = platformPathingAlgorithm.ShortestPath(start, goal, walkerProperties);
-        }
-
-        if (newPath != null && !AreListsAlmostEqual(newPath, currentPath))
-        {
-            //if (currentPath.Count == 0)
-            //{
-            //    currentPath = newPath;
-            //    pathIndex = 2;
-            //    return;
-            //}
-            //float minDistance = Mathf.Infinity;
-            //int bestMergeIndex = 2;
-            //for (int i = 2; i < newPath.Count; i++)
-            //{
-            //    float distance = Vector2.Distance(currentPath[pathIndex], newPath[i]) + Vector2.Distance(currentPath[pathIndex - 1], newPath[i]);
-            //    if (distance < minDistance)
-            //    {
-            //        minDistance = distance;
-            //        bestMergeIndex = i;
-            //    }
-            //}
-            //currentPath = newPath;
-            //pathIndex = bestMergeIndex;
-            if (IsGrounded())
-            {
-                currentPath = newPath;
-                pathIndex = 2;
-            }
-            //else
-            //{
-            //    currentPath = MergeListsWithOverlap(currentPath, newPath).Skip(pathIndex).ToList();
-            //    pathIndex = 0;
-            //}
+            currentPath = newPath;
+            pathIndex = 2;
         }
     }
 

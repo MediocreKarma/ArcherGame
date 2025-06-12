@@ -1,4 +1,5 @@
 using Gamekit2D;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -19,9 +20,9 @@ public class PlatformPathGraph : PathingAlgorithm
     private readonly List<Node> middlePlatformNodes = new();
     private readonly List<Node> cornerNodes = new();
 
-    private Dictionary<Node, List<Edge>> edgeMap;
-    private Dictionary<Edge, Arc> jumpArcs = new();
-    private Dictionary<Edge, Arc> fallArcs = new();
+    private readonly Dictionary<Node, List<Edge>> edgeMap = new();
+    private readonly Dictionary<Edge, Arc> jumpArcs = new();
+    private readonly Dictionary<Edge, Arc> fallArcs = new();
 
     private void Start()
     {
@@ -51,7 +52,6 @@ public class PlatformPathGraph : PathingAlgorithm
 
     private void BuildEdgeMap()
     {
-        edgeMap = new Dictionary<Node, List<Edge>>();
         foreach (var edge in edges)
         {
             if (!edgeMap.ContainsKey(edge.from))
@@ -85,12 +85,20 @@ public class PlatformPathGraph : PathingAlgorithm
             }
         }
         nodes = mergedNodes;
+        int id = 0;
+        foreach (var node in nodes)
+        {
+            node.id = id++;
+        }
     }
+
+    private readonly Queue<Node> queue = new();
+    private readonly HashSet<Node> visited = new();
 
     private bool HasWalkPath(Node start, Node end)
     {
-        Queue<Node> queue = new();
-        HashSet<Node> visited = new();
+        queue.Clear();
+        visited.Clear();
         queue.Enqueue(start);
         visited.Add(start);
 
@@ -165,6 +173,10 @@ public class PlatformPathGraph : PathingAlgorithm
         AddNodesFromLines(platformSurfaces, NodeSpecialType.MiddlePlatform);
         MergeSimilarNodes();
 
+        openArray = new PathNode?[nodes.Count];
+        closedSet = new bool[nodes.Count];
+        pathNodeIndexFromNodeId = new int[nodes.Count];
+
         // walk edges
         for (int i = 0; i < nodes.Count - 1; i++)
         {
@@ -205,7 +217,7 @@ public class PlatformPathGraph : PathingAlgorithm
                 if (!Physics2D.Linecast(origin, target, levelMask))
                 {
                     var arc = new Arc(fallNode.position, candidate.position, 0f);
-                    var edge = new Edge(fallNode, candidate, EdgeType.Fall, arc.Distance());
+                    var edge = new Edge(fallNode, candidate, EdgeType.Fall, arc.ComputeLength(10, arcBuffer));
                     edges.Add(edge);
                     fallArcs.Add(edges.Last(), arc);
                 }
@@ -227,7 +239,7 @@ public class PlatformPathGraph : PathingAlgorithm
                     if (!hit && !HasWalkPath(to, from))
                     {
                         var arc = new Arc(from.position, to.position, 3f);
-                        var edge = new Edge(from, to, EdgeType.Jump, arc.Distance());
+                        var edge = new Edge(from, to, EdgeType.Jump, arc.ComputeLength(10, arcBuffer));
                         edges.Add(edge);
                         jumpArcs.Add(edges.Last(), arc);
                     }
@@ -283,29 +295,45 @@ public class PlatformPathGraph : PathingAlgorithm
 
     public override List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PathingAlgorithm.PatherProperties properties = null)
     {
+        return ShortestPath(start, goal, properties, new());
+    }
+
+    public List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PathingAlgorithm.PatherProperties properties = null, List<Vector2> buffer = null)
+    {
         WalkerProperties walkerProperties;
         if (properties is not WalkerProperties)
             walkerProperties = new WalkerProperties(1, 1, 100, 100);
         else
             walkerProperties = new WalkerProperties(properties.width, properties.height, 100, 100);
-        return InternalShortestPath(start, goal, walkerProperties);
+        return InternalShortestPath(start, goal, walkerProperties, new());
     }
 
-    public List<Vector2> ShortestPath(Vector2 start, Vector2 goal, WalkerProperties properties = null)
+    public List<Vector2> ShortestPath(Vector2 start, Vector2 goal, WalkerProperties properties = null, List<Vector2> buffer = null)
     {
         properties ??= new WalkerProperties(1, 1, 100, 100);
-        return InternalShortestPath(start, goal, properties);
+        buffer ??= new();
+        return InternalShortestPath(start, goal, properties, buffer);
     }
 
-    public List<PathNode> ShortestPathWithNodes(Vector2 start, Vector2 goal, WalkerProperties properties)
-    {
-        properties ??= new WalkerProperties(1, 1, 100, 100);
-        //return InternalShortestPath(start, goal, properties).Select(pos => new PathNode { node = FindClosestNodeBelow(pos), parent = null }).ToList();
-        return null;
-    }
+    //public List<PathNode> ShortestPathWithNodes(Vector2 start, Vector2 goal, WalkerProperties properties)
+    //{
+    //    properties ??= new WalkerProperties(1, 1, 100, 100);
+    //    //return InternalShortestPath(start, goal, properties);
+    //    return null;
+    //}
 
-    private List<Vector2> InternalShortestPath(Vector2 start, Vector2 goal, WalkerProperties properties)
+    private readonly PriorityQueue<PathNode> openSet = new(Comparer<PathNode>.Create((x, y) => {
+        int cmp = x.fCost.CompareTo(y.fCost);
+        return cmp != 0 ? cmp : x.node.id.CompareTo(y.node.id);
+    }));
+    private bool[] closedSet;
+    private PathNode?[] openArray;
+    private readonly List<PathNode> pathNodesList = new();
+    private int[] pathNodeIndexFromNodeId;
+
+    private List<Vector2> InternalShortestPath(Vector2 start, Vector2 goal, WalkerProperties properties, List<Vector2> buffer)
     {
+        buffer.Clear();
         Bounds walkerBounds = new(
             new Vector2(0, properties.height / 2f),
             new Vector2(properties.width, properties.height - 0.1f)
@@ -314,37 +342,37 @@ public class PlatformPathGraph : PathingAlgorithm
         Node startNode = FindClosestNodeBelow(start);
         Node goalNode = FindClosestNodeBelow(goal);
 
-        var openSet = new PriorityQueue<PathNode>(Comparer<PathNode>.Create((x, y) => {
-            int cmp = x.fCost.CompareTo(y.fCost);
-            return cmp != 0 ? cmp : x.node.id.CompareTo(y.node.id);
-        }));
-
-        var closedSet = new HashSet<Node>();
-        var openDict = new Dictionary<Node, PathNode>();
+        openSet.Clear();
+        Array.Fill(closedSet, false);
+        Array.Fill(openArray, null);
+        pathNodesList.Clear();
 
         var startPathNode = new PathNode
         {
             node = startNode,
-            parent = null,
+            parentIndex = -1,
             gCost = 0f,
             fCost = Vector2.Distance(startNode.position, goalNode.position)
         };
 
+        pathNodesList.Add(startPathNode);
+        pathNodeIndexFromNodeId[startPathNode.node.id] = 0;
+
         openSet.Enqueue(startPathNode);
-        openDict[startNode] = startPathNode;
+        openArray[startNode.id] = startPathNode;
 
         while (openSet.Count > 0)
         {
             PathNode current = openSet.Dequeue();
 
-            if (closedSet.Contains(current.node))
+            if (closedSet[current.node.id])
                 continue;
 
-            openDict.Remove(current.node);
-            closedSet.Add(current.node);
+            closedSet[current.node.id] = true;
+            openArray[current.node.id] = null;
 
-            if (current.node == goalNode)
-                return ReconstructPath(current, start, goal, walkerBounds);
+            if (current.node.id == goalNode.id)
+                return ReconstructPath(current, start, goal, buffer);
 
             if (!edgeMap.TryGetValue(current.node, out var neighbors))
                 continue;
@@ -353,7 +381,7 @@ public class PlatformPathGraph : PathingAlgorithm
             {
                 Node neighbor = edge.to;
 
-                if (closedSet.Contains(neighbor))
+                if (closedSet[neighbor.id])
                     continue;
                 if (!IsPositionValid(neighbor.position, walkerBounds))
                     continue;
@@ -361,12 +389,10 @@ public class PlatformPathGraph : PathingAlgorithm
                 float dy = neighbor.position.y - current.node.position.y;
                 float dx = Mathf.Abs(neighbor.position.x - current.node.position.x);
 
-                Debug.Log("Jump arcs are still " + jumpArcs.Count);
-
                 if (edge.type == EdgeType.Jump && (Mathf.Sqrt(dx * dx + dy * dy) > properties.maxJumpDistance || !IsArcValid(jumpArcs.GetValueOrDefault(edge), walkerBounds)))
                     continue;
 
-                float gravity = Mathf.Abs(Physics2D.gravity.y); // usually 9.81
+                float gravity = Mathf.Abs(Physics2D.gravity.y);
                 float fallTime = Mathf.Sqrt(2f * dy / gravity);
                 float maxFallDistance = properties.maxSidewaysSpeed * fallTime;
 
@@ -375,73 +401,59 @@ public class PlatformPathGraph : PathingAlgorithm
 
                 float tentativeG = current.gCost + Vector2.Distance(current.node.position, neighbor.position);
 
-                if (!openDict.TryGetValue(neighbor, out var neighborNode))
+                if (!openArray[neighbor.id].HasValue || tentativeG < openArray[neighbor.id].Value.gCost)
                 {
-                    neighborNode = new PathNode
+                    PathNode newNode = new()
                     {
                         node = neighbor,
-                        parent = current,
+                        parentIndex = pathNodeIndexFromNodeId[current.node.id],
                         gCost = tentativeG,
-                        fCost = tentativeG + edge.distance,
-                        connectingEdgeType = edge.type
+                        fCost = tentativeG + Vector2.Distance(neighbor.position, goalNode.position),
+                        connectingEdge = edge
                     };
-                    openDict[neighbor] = neighborNode;
-                    openSet.Enqueue(neighborNode);
-                }
-                else if (tentativeG < neighborNode.gCost)
-                {
-                    neighborNode = new PathNode
-                    {
-                        node = neighbor,
-                        parent = current,
-                        gCost = tentativeG,
-                        fCost = tentativeG + edge.distance,
-                        connectingEdgeType = edge.type
-                    };
-                    openDict[neighbor] = neighborNode;
-                    openSet.Enqueue(neighborNode);
+                    openArray[neighbor.id] = newNode;
+                    openSet.Enqueue(newNode);
+                    pathNodesList.Add(newNode);
+                    pathNodeIndexFromNodeId[neighbor.id] = pathNodesList.Count - 1;
                 }
             }
         }
 
-        return new List<Vector2>(); // No path found
+        return buffer; // No path found
     }
 
-    private List<Vector2> ReconstructPath(PathNode endNode, Vector2 start, Vector2 goal, Bounds properties)
-    {
-        var path = new List<Vector2> { goal };
-        PathNode current = endNode;
-        while (current != null)
-        {
-            Vector2 from = start;
-            if (current.parent != null)
-                from = current.parent.node.position;
-            Vector2 to = current.node.position;
+    private readonly List<Vector2> arcBuffer = new(10);
 
-            switch (current.connectingEdgeType)
+    private List<Vector2> ReconstructPath(PathNode endNode, Vector2 start, Vector2 goal, List<Vector2> buffer)
+    {
+        buffer.Add(goal);
+        PathNode current = endNode;
+        while (current.parentIndex != -1)
+        {
+            switch (current.connectingEdge.type)
             {
                 case EdgeType.Walk:
-                    path.Add(to);
+                    Vector2 to = current.node.position;
+                    buffer.Add(to);
                     break;
                 case EdgeType.Fall:
                 {
-                    List<Vector2> arc = new Arc(to, from, 0f).GenerateJumpArcPoints(10);
-                    path.AddRange(arc);
+                    List<Vector2> arc = fallArcs[current.connectingEdge].GenerateJumpArcPoints(10, true, arcBuffer);
+                    buffer.AddRange(arc);
                     break;
                 }
                 case EdgeType.Jump:
                 {
-                    List<Vector2> arc = new Arc(to, from, 3f).GenerateJumpArcPoints(10);
-                    path.AddRange(arc);
+                    List<Vector2> arc = jumpArcs[current.connectingEdge].GenerateJumpArcPoints(10, true, arcBuffer);
+                    buffer.AddRange(arc);
                     break;
                 }
             }
-
-            current = current.parent;
+            current = pathNodesList[current.parentIndex];
         }
-        path.Add(start);
-        path.Reverse();
-        return path;
+        buffer.Add(start);
+        buffer.Reverse();
+        return buffer;
     }
 
     private Node FindClosestNodeBelow(Vector2 position, float horizontalTolerance = 3f)
@@ -560,12 +572,12 @@ public class PlatformPathGraph : PathingAlgorithm
         }
     }
 
-    public class PathNode
+    public struct PathNode
     {
         public Node node;
-        public PathNode parent;
+        public int parentIndex;
         public float gCost;
         public float fCost;
-        public EdgeType connectingEdgeType;
+        public Edge connectingEdge;
     }
 }

@@ -307,44 +307,9 @@ public class PrecomputedShortestPathAlgorithm : PathingAlgorithm
         return (bestFrom, bestTo);
     }
 
-    public override List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PatherProperties _properties = null)
+    public override List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PatherProperties properties = null)
     {
-        if (IsVisible(start, goal))
-        {
-            return new List<Vector2> { start, goal };
-        }
-
-        bool isOutsideStart = IsOutside(start);
-        bool isOutsideGoal = IsOutside(goal);
-        if (isOutsideStart != isOutsideGoal)
-        {
-            return new List<Vector2> { start, goal };
-        }
-
-        var corners = insideCorners;
-        var shortestPaths = insideShortestPaths;
-        var pathLengths = insidePathLengths;
-        if (isOutsideStart)
-        {
-            corners = outsideCorners;
-            shortestPaths = outsideShortestPaths;
-            pathLengths = outsidePathLengths;
-        }
-
-        LoadStartAndGoalLists(start, goal, corners);
-        (Vector2 bestFrom, Vector2 bestTo) = BestFromAndTo(start, goal, pathLengths);
-
-        List<Vector2> bestPath = new() { start };
-        if (bestFrom == bestTo)
-        {
-            bestPath.Add(bestFrom);
-        }
-        else
-        {
-            bestPath.AddRange(shortestPaths[(bestFrom, bestTo)]);
-        }
-        bestPath.Add(goal);
-        return bestPath;
+        return ShortestPath(start, goal, properties, new List<Vector2>());
     }
 
     public List<Vector2> ShortestPath(Vector2 start, Vector2 goal, PatherProperties _, List<Vector2> buffer)

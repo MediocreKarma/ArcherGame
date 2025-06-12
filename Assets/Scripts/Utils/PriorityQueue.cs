@@ -21,6 +21,11 @@ public class PriorityQueue<T>
         HeapifyUp(data.Count - 1);
     }
 
+    public void Clear()
+    {
+        data.Clear();
+    }
+
     public T Dequeue()
     {
         if (data.Count == 0)

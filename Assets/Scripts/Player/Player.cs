@@ -300,7 +300,6 @@ public class Player : MonoBehaviour
         {
             playerFirstInput = true;
         }
-        Debug.Log($"Jumping! Time since last grounded: {timeSinceLastGrounded} at frame {Time.frameCount}");
         if (timeSinceLastGrounded < groundedForgiveness)
         {
             timeSinceLastGrounded = groundedForgiveness;

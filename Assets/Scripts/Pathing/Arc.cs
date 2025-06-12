@@ -1,5 +1,7 @@
+using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEngine.UI.Image;
 
 public class Arc
 {
@@ -23,25 +25,37 @@ public class Arc
         return Vector2.Lerp(a, b, t);
     }
 
-    public List<Vector2> GenerateJumpArcPoints(int numPoints)
+    public List<Vector2> GenerateJumpArcPoints(int numPoints, bool reversed = false, List<Vector2> buffer = null)
     {
-        List<Vector2> points = new();
-        for (int i = 0; i <= numPoints; i++)
+        buffer ??= new(numPoints);
+        buffer.Clear();
+        if (!reversed)
         {
-            float t = (float)i / numPoints;
-            points.Add(GetPointAt(t));
+            for (int i = 0; i <= numPoints; ++i)
+            {
+                float t = (float)i / numPoints;
+                buffer.Add(GetPointAt(t));
+            }
         }
-        return points;
+        else
+        {
+            for (int i = numPoints; i >= 0; --i)
+            {
+                float t = (float)i / numPoints;
+                buffer.Add(GetPointAt(t));
+            }
+        }
+        return buffer;
     }
 
-    public float Distance(int segments = 10)
+    public float ComputeLength(int segments = 10, List<Vector2> buffer = null)
     {
         if (segments < 1)
         {
             segments = 1; // Ensure at least one segment
         }
         float distance = 0f;
-        List<Vector2> points = GenerateJumpArcPoints(segments);
+        List<Vector2> points = GenerateJumpArcPoints(segments, false, buffer);
         for (int i = 0; i < points.Count - 1; i++)
         {
             distance += Vector2.Distance(points[i], points[i + 1]);
