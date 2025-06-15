@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using Unity.VisualScripting.FullSerializer.Internal;
 using UnityEngine;
 using UnityEngine.Rendering.UI;
@@ -13,7 +14,7 @@ public abstract class EnemyAI : MonoBehaviour
 
     public float attackDamage = 1f;
     public float speed = 5f;
-    public int hitpoints = 1;
+    public float hitpoints = 1f;
     public bool isAlive = true;
     public bool isAggressive = false;
     protected bool hasArrowStuck = false;
@@ -29,8 +30,8 @@ public abstract class EnemyAI : MonoBehaviour
 
     public event System.Action OnDeath;
 
-    public int StartHitpoints { get; private set; }
-    public Vector2 StartPosition { get; private set; }
+    public float StartHitpoints { get; private set; }
+    public Vector3 StartPosition { get; private set; }
 
     private ArrowSticking arrowSticking;
     private float timeSinceLastHit = 0f;
@@ -39,8 +40,9 @@ public abstract class EnemyAI : MonoBehaviour
     protected string id;
 
     public bool IsTarget = false;
+    private AudioSource hitAudio;
+    [SerializeField] private AudioClip hitSound;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     protected virtual void Start()
     {
         id = System.Guid.NewGuid().ToString();
@@ -50,6 +52,11 @@ public abstract class EnemyAI : MonoBehaviour
         arrowSticking = FindFirstObjectByType<ArrowSticking>();
         StartHitpoints = hitpoints;
         StartPosition = transform.position;
+        var sources = GetComponents<AudioSource>();
+        if (sources.Length > 0)
+        {
+            hitAudio = GetComponents<AudioSource>()?[0];
+        }
     }
 
     public void Reset()
@@ -135,34 +142,41 @@ public abstract class EnemyAI : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Arrow"))
         {
-            Debug.Log("Arrow hit enemy at " + Time.frameCount);
-            ArrowSticking arrow = collision.gameObject.GetComponent<ArrowSticking>();
-            if (arrow.StuckTo() == gameObject)
+            Arrow arrow = collision.gameObject.GetComponent<Arrow>();
+            ArrowSticking sticking = arrow.Sticking;
+            if (sticking.StuckTo() == gameObject)
             {
-                Debug.Log("Arrow already stuck to enemy at " + Time.frameCount);
                 return;
             }
-            arrow.StickTo(rb, collision);
+            sticking.StickTo(rb, collision);
             hasArrowStuck = true;
             for (int i = 0; i < collision.contactCount; i++)
             {
                 ContactPoint2D contact = collision.GetContact(i);
                 if (contact.otherCollider.CompareTag("Shield"))
                 {
-                    Debug.Log("Arrow hit shield " + Time.frameCount);
                     return;
                 }
             }
-            Debug.Log("Arrow dealt damage " + Time.frameCount);
-            hitpoints--;
-            if (hitpoints <= 0)
-            {
-                Die(collision);
-            }
-            else
-            {
-                Stagger(collision);
-            }
+            TakeDamage(arrow.AttackDamage, collision);
+        }
+    }
+
+    protected void TakeDamage(float damage, Collision2D collision)
+    {
+        hitpoints -= Mathf.RoundToInt(damage);
+        const float epsilon = 0.01f;
+        if (hitAudio != null && hitSound != null)
+        {
+            hitAudio.PlayOneShot(hitSound);
+        }
+        if (hitpoints <= epsilon)
+        {
+            Die(collision);
+        }
+        else
+        {
+            Stagger(collision);
         }
     }
 

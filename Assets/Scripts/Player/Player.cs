@@ -46,6 +46,7 @@ public class Player : MonoBehaviour
 
     private Rigidbody2D rb;
     private Collider2D triggerCollider;
+    public Collider2D TriggerCollider { get { return triggerCollider; } }
     private Collider2D groundCollider;
 
     public Interactable CurrentInteractable { get; set; }
@@ -58,6 +59,15 @@ public class Player : MonoBehaviour
 
     private bool isHeadFacingRight = true;
     public float groundedCheckHeight = 5f;
+
+    private bool isGroundedLastUpdate;
+
+    private AudioSource walkAudio;
+    private AudioSource effectSource;
+    [SerializeField] private AudioClip dashEffect;
+    [SerializeField] private AudioClip jumpEffect;
+    [SerializeField] private AudioClip landEffect;
+    [SerializeField] private AudioClip hurtEffect;
 
     void Start()
     {
@@ -72,6 +82,9 @@ public class Player : MonoBehaviour
         MaxHealth = health;
         groundedCheckSize = new Vector2(groundCollider.bounds.size.x, groundedCheckHeight);
         bottomCenter = new();
+        var audios = GetComponents<AudioSource>();
+        walkAudio = audios[0];
+        effectSource = audios[1];
     }
 
     private void Update()
@@ -102,6 +115,25 @@ public class Player : MonoBehaviour
         {
             timeSinceLastJumpInput += Time.deltaTime;
         }
+        if (walkAudio.isPlaying)
+        {
+            if (horizontalMovement == 0 || !isGrounded)
+            {
+                walkAudio.Stop();
+            }
+        }
+        else
+        {
+            if (horizontalMovement != 0 && isGrounded)
+            {
+                walkAudio.Play();
+            }
+        }
+        if (!isGroundedLastUpdate && isGrounded)
+        {
+            effectSource.PlayOneShot(landEffect);
+        }
+        isGroundedLastUpdate = isGrounded;
     }
 
     private void FixedUpdate()
@@ -226,6 +258,7 @@ public class Player : MonoBehaviour
             var dir = isFacingRight ? Vector2.right : Vector2.left;
             timeSinceLastDash = 0;
             rb.AddForce(dir * 40f, ForceMode2D.Impulse);
+            effectSource.PlayOneShot(dashEffect);
             StartCoroutine(DashIFrames(0.1f));
         }
     }
@@ -305,6 +338,7 @@ public class Player : MonoBehaviour
             timeSinceLastGrounded = groundedForgiveness;
             rb.linearVelocityY = jumpingPower;
         }
+        effectSource.PlayOneShot(jumpEffect);
     }
 
     public void TakeDamage(float damage, Vector2 direction)
@@ -316,6 +350,7 @@ public class Player : MonoBehaviour
         {
             Die();
         }
+        effectSource.PlayOneShot(hurtEffect);
         //Debug.Log($"Player took {damage} damage! Health: {health}");
         //Debug.Log("Direction " + direction);
         Vector2 knockbackDirection = (direction.normalized + Vector2.up * 0.2f).normalized;

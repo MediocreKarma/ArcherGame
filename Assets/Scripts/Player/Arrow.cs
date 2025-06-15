@@ -22,6 +22,13 @@ public class Arrow : MonoBehaviour
     private bool isInsideWall = false;
     private Coroutine returnCoroutine;
 
+    private AudioSource effectAudio;
+    private AudioSource magicalHumAudio;
+
+    public float AttackDamage { get; private set; } = 1f;
+
+    [SerializeField] private AudioClip hitEffect;
+
     public Vector3 OriginPosition()
     {
         return originalPosition;
@@ -58,7 +65,7 @@ public class Arrow : MonoBehaviour
             StopCoroutine(returnCoroutine);
             returnCoroutine = null;
         }
-        
+        magicalHumAudio.Play();
         returnCoroutine = StartCoroutine(ReturnSequence());
     }
 
@@ -149,6 +156,9 @@ public class Arrow : MonoBehaviour
         Sticking = GetComponent<ArrowSticking>();
         pathing = FindFirstObjectByType<PrecomputedShortestPathAlgorithm>();
         arrowCollider = GetComponentInChildren<Collider2D>();
+        var audios = GetComponents<AudioSource>();
+        effectAudio = audios[0];
+        magicalHumAudio = audios[1];
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -158,6 +168,11 @@ public class Arrow : MonoBehaviour
         {
             return;
         }
+        if (magicalHumAudio.isPlaying)
+        {
+            magicalHumAudio.Stop();
+        }
+        effectAudio.PlayOneShot(hitEffect);
         rb.gravityScale = 0f;
         rb.linearVelocity = Vector2.zero;
         hasHit = true;
@@ -171,6 +186,10 @@ public class Arrow : MonoBehaviour
     {
         if (isReturning)
         {
+            if (magicalHumAudio.isPlaying)
+            {
+                magicalHumAudio.Stop();
+            }
             RearmingBow();
         }
     }

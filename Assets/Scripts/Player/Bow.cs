@@ -15,6 +15,10 @@ public class Bow : MonoBehaviour
     private Vector3 arrowTransformChargeOrigin;
     private Player player;
 
+    private AudioSource chargeAudio;
+    private AudioSource effectSource;
+    [SerializeField] private AudioClip launchAudio;
+
     void Update()
     {
         //Vector2 bowPosition = transform.position;
@@ -35,6 +39,9 @@ public class Bow : MonoBehaviour
     {
         arrowTransformChargeOrigin = arrow.OriginPosition();
         player = GetComponentInParent<Player>();
+        var sources = GetComponents<AudioSource>();
+        chargeAudio = sources[0];
+        effectSource = sources[1];
     }
 
     void ChargingUpdate()
@@ -56,9 +63,11 @@ public class Bow : MonoBehaviour
         {
             return;
         }
+        effectSource.Play();
         chargeTime = 0;
         arrowTransformChargeOrigin = arrow.OriginPosition();
         charging = true;
+        chargeAudio.Play();
     }
 
     public void ReleaseCharge()
@@ -68,6 +77,7 @@ public class Bow : MonoBehaviour
             return;
         }
         charging = false;
+        chargeAudio.Stop();
         Shoot();
     }
 
@@ -78,6 +88,7 @@ public class Bow : MonoBehaviour
 
     void Shoot()
     {
+        effectSource.PlayOneShot(launchAudio);
         arrow.Launch(Mathf.Lerp(minLaunchForce, maxLaunchForce, chargeTime / maxChargeTime));
     }
 

@@ -31,7 +31,6 @@ public class PlatformPathGraph : PathingAlgorithm
         {
             if (walker != null)
             {
-                Debug.Log($"Walker Properties {walker.Properties.maxSidewaysSpeed}, {walker.Properties.maxJumpDistance}");
                 maxSidewaysSpeed = Mathf.Max(maxSidewaysSpeed, walker.Properties.maxSidewaysSpeed);
                 maxJumpDistance = Mathf.Max(maxJumpDistance, walker.Properties.maxJumpDistance);
             }

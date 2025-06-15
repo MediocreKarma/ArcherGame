@@ -9,6 +9,12 @@ public class WalkingEnemyAI : EnemyAI
     [SerializeField] private LayerMask groundLayerMask;
     public float maxJumpHeight = 10f;
 
+    private float movedDistance = 0f;
+    [SerializeField] private float MoveDistanceWalkSound = 1f;
+    private Vector2 previousPosition;
+    private AudioSource walkingAudio;
+    [SerializeField] private AudioClip moveSound;
+
     private void Awake()
     {
         Collider2D[] colliders = GetComponentsInChildren<Collider2D>();
@@ -43,6 +49,8 @@ public class WalkingEnemyAI : EnemyAI
             return;
         }
         pathIndex = 0;
+        walkingAudio = GetComponents<AudioSource>()[1];
+        previousPosition = rb.position;
     }
 
     private new void Update()
@@ -182,6 +190,13 @@ public class WalkingEnemyAI : EnemyAI
             else
             {
                 rb.MovePosition(currentPosition + direction * distanceThisFrame);
+            }
+            movedDistance += Vector2.Distance(rb.position, previousPosition);
+            previousPosition = rb.position;
+            if (movedDistance >= MoveDistanceWalkSound && IsGrounded())
+            {
+                walkingAudio.PlayOneShot(moveSound);
+                movedDistance = 0f;
             }
         }
 #if UNITY_EDITOR

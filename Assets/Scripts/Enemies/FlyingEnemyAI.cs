@@ -7,6 +7,8 @@ public class FlyingEnemyAI : EnemyAI
     private new CircleCollider2D collider;
     private PrecomputedShortestPathAlgorithm flyingPathingAlgorithm;
 
+    private AudioSource flyingAudio;
+
     private new void Start()
     {
         base.Start();
@@ -16,9 +18,16 @@ public class FlyingEnemyAI : EnemyAI
         {
             flyingPathingAlgorithm = algorithm;
         }
-        else
+        var audios = GetComponents<AudioSource>();
+        if (audios.Length >= 2)
         {
-            Debug.LogError("FlyingEnemyAI requires a PrecomputedShortestPathAlgorithm for pathfinding.");
+            flyingAudio = GetComponents<AudioSource>()[1];
+            flyingAudio.loop = true;
+            flyingAudio.spatialBlend = 1f;
+            flyingAudio.volume = 0.5f;
+            flyingAudio.minDistance = 0.001f;
+            flyingAudio.maxDistance = 20f;
+            flyingAudio.Play();
         }
     }
 
@@ -82,13 +91,13 @@ public class FlyingEnemyAI : EnemyAI
             }
         }
 #if UNITY_EDITOR
-        for (int i = 0; i < currentPath.Count - 1; i++)
-        {
-            Vector2 from = currentPath[i];
-            Vector2 to = currentPath[i + 1];
+            for (int i = 0; i < currentPath.Count - 1; i++)
+            {
+                Vector2 from = currentPath[i];
+                Vector2 to = currentPath[i + 1];
 
-            Debug.DrawLine(from, to, Color.cyan, Time.fixedDeltaTime);
-        }
+                Debug.DrawLine(from, to, Color.cyan, Time.fixedDeltaTime);
+            }
 #endif
     }
 

@@ -25,6 +25,7 @@ public class PrecomputedShortestPathAlgorithm : PathingAlgorithm
 
     void Start()
     {
+        targetLayer = 1 << targetCollider.gameObject.layer;
         FindCorners();
         Debug.Assert(insideCorners.Count == outsideCorners.Count, "Inside and outside corners should be equal in count.");
 
@@ -69,8 +70,22 @@ public class PrecomputedShortestPathAlgorithm : PathingAlgorithm
         HashSet<Vector2> visited = new();
         Queue<Vector2> queue = new();
 
-        queue.Enqueue(corners[0]);
-        visited.Add(corners[0]);
+
+        var player = GameObject.Find("Player");
+        var closestPointDistance = 0f;
+        Vector2 closestCorner = Vector2.zero;
+        foreach (var pt in corners)
+        {
+            float dist = Vector2.Distance(pt, player.transform.position);
+            if (dist < closestPointDistance || closestPointDistance == 0f)
+            {
+                closestPointDistance = dist;
+                closestCorner = pt;
+            }
+        }
+
+        queue.Enqueue(closestCorner);
+        visited.Add(closestCorner);
 
         while (queue.Count > 0)
         {
@@ -93,26 +108,6 @@ public class PrecomputedShortestPathAlgorithm : PathingAlgorithm
                 outsideCorners.Add(pt); 
             else
                 insideCorners.Add(pt);
-        }
-        float closestPointInside = 0f;
-        float closestPointOutside = 0f;
-
-        var player = GameObject.Find("Player");
-        foreach (var pt in insideCorners)
-        {
-            float dist = Vector2.Distance(pt, player.transform.position);
-            if (dist < closestPointInside || closestPointInside == 0f)
-                closestPointInside = dist;
-        }
-        foreach (var pt in outsideCorners)
-        {
-            float dist = Vector2.Distance(pt, player.transform.position);
-            if (dist < closestPointOutside || closestPointOutside == 0f)
-                closestPointOutside = dist;
-        }
-        if (closestPointInside < closestPointOutside)
-        {
-            (outsideCorners, insideCorners) = (insideCorners, outsideCorners);
         }
 
         startVisible = new Vector2[outsideCorners.Count];
@@ -164,14 +159,11 @@ public class PrecomputedShortestPathAlgorithm : PathingAlgorithm
         }
     }
 
+    private int targetLayer;
     public bool IsVisible(Vector2 a, Vector2 b)
     {
-        var hits = Physics2D.Linecast(a + Vector2.up * raycastOffset, b + Vector2.up * raycastOffset, 1 << targetCollider.gameObject.layer);
-        if (hits.collider == targetCollider)
-        {
-            return false;
-        }
-        return true;
+        var hit = Physics2D.Linecast(a + Vector2.up * raycastOffset, b + Vector2.up * raycastOffset, targetLayer);
+        return hit.collider == null;
     }
 
 

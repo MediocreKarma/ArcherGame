@@ -18,7 +18,7 @@ public class PlayerUI : MonoBehaviour
     [Header("Dash Cooldown Bar")]
     [SerializeField] private Image dashBarFill;
     [SerializeField] private Color dashReadyColor = Color.white;
-    [SerializeField] private Color dashBlockedColor = new(1f, 1f, 1f, 0.3f); // faded white
+    [SerializeField] private Color dashBlockedColor = new(1f, 1f, 1f, 0.3f);
     [SerializeField] private Color dashCooldownColor = Color.gray;
 
     [SerializeField] private GameObject restartText;
