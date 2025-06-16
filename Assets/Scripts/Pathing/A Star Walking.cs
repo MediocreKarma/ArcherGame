@@ -1,4 +1,5 @@
 using Gamekit2D;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,6 +24,8 @@ public class PlatformPathGraph : PathingAlgorithm
     private readonly Dictionary<Node, List<Edge>> edgeMap = new();
     private readonly Dictionary<Edge, Arc> jumpArcs = new();
     private readonly Dictionary<Edge, Arc> fallArcs = new();
+
+    private const float gravity = 9.81f;
 
     private void Start()
     {
@@ -202,13 +205,12 @@ public class PlatformPathGraph : PathingAlgorithm
                 float dx = Mathf.Abs(candidate.position.x - fallNode.position.x);
                 float dy = fallNode.position.y - candidate.position.y;
 
-                if (dy <= -0.02f) continue; // Not below
+                if (dy <= 0f) continue;
 
-                float gravity = 9.81f;
                 float fallTime = Mathf.Sqrt(2f * dy / gravity);
                 float maxReachX = maxSidewaysSpeed * fallTime;
 
-                if (dx > maxReachX) continue; // Too far horizontally to reach by falling
+                if (dx > maxReachX) continue;
 
                 Vector2 origin = fallNode.position + Vector2.up * 0.1f;
                 Vector2 target = candidate.position + Vector2.up * 0.1f;
@@ -258,16 +260,10 @@ public class PlatformPathGraph : PathingAlgorithm
         {
             Gizmos.DrawSphere(node.position, 0.1f);
         }
+        Gizmos.color = Color.green;
         foreach (var edge in edges)
         {
-            Gizmos.color = edge.type switch
-            {
-                EdgeType.Walk => Color.green,
-                EdgeType.Jump => Color.red,
-                EdgeType.Fall => Color.blue,
-                _ => Color.gray,
-            };
-            if (edge.type != EdgeType.Jump)
+            if (edge.type == EdgeType.Walk)
             {
                 Gizmos.DrawLine(edge.from.position, edge.to.position);
             }
@@ -279,6 +275,23 @@ public class PlatformPathGraph : PathingAlgorithm
             {
                 Arc arc = pair.Value;
 
+                const int segments = 20;
+                Vector2 prev = arc.GetPointAt(0);
+                for (int i = 1; i <= segments; i++)
+                {
+                    float t = i / (float)segments;
+                    Vector2 next = arc.GetPointAt(t);
+                    Gizmos.DrawLine(prev, next);
+                    prev = next;
+                }
+            }
+        }
+        Gizmos.color = Color.blue;
+        if (fallArcs != null)
+        {
+            foreach (var pair in fallArcs)
+            {
+                Arc arc = pair.Value;
                 const int segments = 20;
                 Vector2 prev = arc.GetPointAt(0);
                 for (int i = 1; i <= segments; i++)
@@ -304,7 +317,7 @@ public class PlatformPathGraph : PathingAlgorithm
             walkerProperties = new WalkerProperties(1, 1, 100, 100);
         else
             walkerProperties = new WalkerProperties(properties.width, properties.height, 100, 100);
-        return InternalShortestPath(start, goal, walkerProperties, new());
+        return ShortestPath(start, goal, walkerProperties, buffer);
     }
 
     public List<Vector2> ShortestPath(Vector2 start, Vector2 goal, WalkerProperties properties = null, List<Vector2> buffer = null)
@@ -391,10 +404,8 @@ public class PlatformPathGraph : PathingAlgorithm
                 if (edge.type == EdgeType.Jump && (Mathf.Sqrt(dx * dx + dy * dy) > properties.maxJumpDistance || !IsArcValid(jumpArcs.GetValueOrDefault(edge), walkerBounds)))
                     continue;
 
-                float gravity = Mathf.Abs(Physics2D.gravity.y);
                 float fallTime = Mathf.Sqrt(2f * dy / gravity);
                 float maxFallDistance = properties.maxSidewaysSpeed * fallTime;
-
                 if (edge.type == EdgeType.Fall && (dx > maxFallDistance || !IsArcValid(fallArcs.GetValueOrDefault(edge), walkerBounds)))
                     continue;
 
@@ -410,14 +421,13 @@ public class PlatformPathGraph : PathingAlgorithm
                         fCost = tentativeG + Vector2.Distance(neighbor.position, goalNode.position),
                         connectingEdge = edge
                     };
-                    openArray[neighbor.id] = newNode;
+                    openArray[newNode.node.id] = newNode;
                     openSet.Enqueue(newNode);
                     pathNodesList.Add(newNode);
-                    pathNodeIndexFromNodeId[neighbor.id] = pathNodesList.Count - 1;
+                    pathNodeIndexFromNodeId[newNode.node.id] = pathNodesList.Count - 1;
                 }
             }
         }
-
         return buffer; // No path found
     }
 

@@ -32,7 +32,6 @@ public class WalkingEnemyAI : EnemyAI
             float width = combinedBounds.size.x;
             float height = combinedBounds.size.y;
             walkerProperties = new PlatformPathGraph.WalkerProperties(width, height, maxJumpHeight, speed);
-            Debug.Log($"Collider bounds: width: {width}, height: {height}");
         }
     }
 
@@ -49,8 +48,8 @@ public class WalkingEnemyAI : EnemyAI
             return;
         }
         pathIndex = 0;
-        walkingAudio = GetComponents<AudioSource>()[1];
         previousPosition = rb.position;
+        walkingAudio = GetComponents<AudioSource>()[1];
     }
 
     private new void Update()
@@ -193,7 +192,7 @@ public class WalkingEnemyAI : EnemyAI
             }
             movedDistance += Vector2.Distance(rb.position, previousPosition);
             previousPosition = rb.position;
-            if (movedDistance >= MoveDistanceWalkSound && IsGrounded())
+            if (movedDistance >= MoveDistanceWalkSound && IsGrounded() && moveSound != null)
             {
                 walkingAudio.PlayOneShot(moveSound);
                 movedDistance = 0f;

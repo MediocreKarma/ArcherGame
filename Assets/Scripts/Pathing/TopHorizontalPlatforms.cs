@@ -112,8 +112,6 @@ public class IslandTopDetector : MonoBehaviour
                 if (!info.hasWall) cnt3++;
             }
         }
-
-        Debug.Log($"Found {cnt} upwards walls and {cnt2} downwards walls and {cnt3} corners with no walls.");
     }
 
     private bool ApproximatelySame(float a, float b, float tolerance)
@@ -189,8 +187,26 @@ public class IslandTopDetector : MonoBehaviour
                 }
             }
         }
+    }
 
-        Debug.Log($"Identified {TopSurfaces.Count} top surfaces.");
+    private void OnDrawGizmos()
+    {
+        //if (targetCollider == null) return;
+        //Gizmos.color = Color.green;
+        //foreach (var edge in horizontalEdges)
+        //{
+        //    Gizmos.DrawLine(edge.start, edge.end);
+        //}
+        //Gizmos.color = Color.yellow;
+        //foreach (var surface in TopSurfaces)
+        //{
+        //    Gizmos.DrawLine(surface.start, surface.end);
+        //}
+        //Gizmos.color = Color.red;
+        //foreach (var corner in topSurfaceCorners)
+        //{
+        //    Gizmos.DrawSphere(corner.position, 0.1f);
+        //}
     }
 
     public struct LineSegment

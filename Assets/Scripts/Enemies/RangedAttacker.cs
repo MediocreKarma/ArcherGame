@@ -41,19 +41,19 @@ public class RangedAttacker : MonoBehaviour
         }
     }
 
-    private bool HasLineOfSight()
+    private Vector2? LineOfSight()
     {
         if (playerCollider == null) 
         { 
             playerCollider = player.TriggerCollider;
-            return false;
+            return null;
         }
         var bounds = playerCollider.bounds;
         Vector2[] points = new Vector2[]
         {
+            bounds.center,
+            bounds.center - Vector3.up * bounds.extents.y,
             bounds.center + Vector3.up * bounds.extents.y,
-            bounds.center,                                
-            bounds.center - Vector3.up * bounds.extents.y
         };
         foreach (var point in points)
         {
@@ -61,11 +61,11 @@ public class RangedAttacker : MonoBehaviour
             Debug.DrawLine(shootPoint.position, point, Color.red, 1f);
             if (hit.collider == null)
             {
-                return true;
+                return point;
             }
         }
 
-        return false;
+        return null;
     }
 
     private void ShootAtPlayer()
@@ -74,11 +74,12 @@ public class RangedAttacker : MonoBehaviour
         {
             return;
         }
-        if (!HasLineOfSight())
+        Vector2? attackPoint = LineOfSight();
+        if (!attackPoint.HasValue)
         {
             return;
         }
-        Vector2 direction = (playerTransform.position - shootPoint.position).normalized;
+        Vector2 direction = (attackPoint.Value - (Vector2)shootPoint.position).normalized;
 
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 

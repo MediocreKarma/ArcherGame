@@ -149,7 +149,6 @@ public class SaveManager : MonoBehaviour
         savePoints = FindObjectsByType<SavePoint>(FindObjectsSortMode.InstanceID);
         doorLevers = FindObjectsByType<DoorLever>(FindObjectsSortMode.InstanceID);
         player = FindFirstObjectByType<Player>();
-        Debug.Log("Inited player");
         doorDeathController = FindFirstObjectByType<DoorDeathController>();
         const string defaultSavePoint = "Save Point #0";
         var defaultSave = GameObject.Find(defaultSavePoint).GetComponent<SavePoint>();

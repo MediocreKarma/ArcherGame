@@ -33,11 +33,11 @@ public class Projectile : MonoBehaviour
         }
         else if (collision.CompareTag("Player"))
         {
-            if (collision.TryGetComponent<Player>(out var player))
+            if (collision.TryGetComponent<Player>(out var player) && !player.IsInvulnerable())
             {
                 player.TakeDamage(damage, direction);
+                Destroy(gameObject);
             }
-            Destroy(gameObject);
         }
     }
 

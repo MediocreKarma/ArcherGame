@@ -116,11 +116,11 @@ public class PrecomputedShortestPathAlgorithm : PathingAlgorithm
 #if UNITY_EDITOR
         foreach (var pt in insideCorners)
         {
-            DebugDrawCircle(pt, 0.02f, Color.red, 1000f);
+            DebugDrawCircle(pt, 0.02f, Color.blue, 1000f);
         }
         foreach (var pt in outsideCorners)
         {
-            DebugDrawCircle(pt, 0.02f, Color.blue, 1000f);
+            DebugDrawCircle(pt, 0.02f, Color.red, 1000f);
         }
 #endif
     }
