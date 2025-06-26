@@ -118,6 +118,11 @@ public class SaveManager : MonoBehaviour
         pRb.linearVelocity = Vector2.zero;
         pRb.angularVelocity = 0f;
 
+        foreach (var projectile in FindObjectsByType<Projectile>(FindObjectsSortMode.None))
+        {
+            Destroy(projectile.gameObject);
+        }
+
         if (winningLever.IsTriggered)
         {
             winningLever.ResetTrigger();

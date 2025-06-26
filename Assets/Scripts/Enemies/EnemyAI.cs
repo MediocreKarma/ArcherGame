@@ -116,7 +116,11 @@ public abstract class EnemyAI : MonoBehaviour
         }
         else
         {
-            isAggressive = !player.IsDead;
+            float distanceToPlayer = Vector2.Distance(rb.position, playerTransform.position);
+            if (distanceToPlayer > aggroDistance * 3 || player.IsDead)
+            {
+                isAggressive = false;
+            }
         }
     }
 
@@ -176,6 +180,7 @@ public abstract class EnemyAI : MonoBehaviour
         }
         else
         {
+            isAggressive = true;
             Stagger(collision);
         }
     }

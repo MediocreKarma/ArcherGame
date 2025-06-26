@@ -70,6 +70,7 @@ public class Arrow : MonoBehaviour
     }
 
     public float jumpTime = 0.5f;
+    private WaitForSeconds arrowJumpWait;
     private static readonly WaitForSeconds arrowReturningWait = new(0.067f);
 
     private IEnumerator ReturnSequence()
@@ -87,7 +88,7 @@ public class Arrow : MonoBehaviour
             );
             rb.simulated = true;
             rb.linearVelocity = 3f * retrieveSpeed * jumpDirection;
-            yield return new WaitForSeconds(jumpTime);
+            yield return arrowJumpWait;
             hasHit = false;
             isJumping = false;
             isInsideWall = false;
@@ -143,7 +144,7 @@ public class Arrow : MonoBehaviour
         isLaunched = false;
         isJumping = false;
         hasHit = false;
-        rb.transform.localScale = defaultRearmedBowRbTransformLocalScale;
+        transform.localScale = defaultRearmedBowRbTransformLocalScale;
         rb.gravityScale = 1f;
     }
 
@@ -159,6 +160,7 @@ public class Arrow : MonoBehaviour
         var audios = GetComponents<AudioSource>();
         effectAudio = audios[0];
         magicalHumAudio = audios[1];
+        arrowJumpWait = new WaitForSeconds(jumpTime);
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
