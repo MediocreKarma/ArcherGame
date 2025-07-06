@@ -98,7 +98,7 @@ public class SaveManager : MonoBehaviour
             var saved = data.doorLevers.Find(l => l.leverName.Equals(lever.InteractableName));
             if (saved != null)
             {
-                if (!saved.isTriggered)
+                if (!saved.isTriggered && lever.IsTriggered)
                 {
                     lever.ResetTrigger();
                 }

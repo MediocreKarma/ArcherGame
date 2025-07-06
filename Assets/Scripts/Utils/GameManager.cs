@@ -7,6 +7,7 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        //Cursor.visible = false;
         var interactables = FindObjectsByType<Interactable>(FindObjectsSortMode.None);
         foreach (var interactable in interactables)
         {

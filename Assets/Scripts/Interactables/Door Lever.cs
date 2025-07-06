@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -27,6 +28,8 @@ public class DoorLever : Interactable
 
     public void ResetTrigger()
     {
+        if (!IsTriggered) 
+            return;
         IsTriggered = false;
         foreach (var door in doors)
         {

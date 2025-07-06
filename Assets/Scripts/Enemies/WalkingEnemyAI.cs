@@ -50,6 +50,7 @@ public class WalkingEnemyAI : EnemyAI
         pathIndex = 0;
         previousPosition = rb.position;
         walkingAudio = GetComponents<AudioSource>()[1];
+        walkingAudio.volume = 0.5f;
     }
 
     private new void Update()
