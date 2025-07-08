@@ -43,11 +43,14 @@ public abstract class EnemyAI : MonoBehaviour
     private AudioSource hitAudio;
     [SerializeField] private AudioClip hitSound;
 
+    private float playerHeightOffset;
+
     protected virtual void Start()
     {
         id = System.Guid.NewGuid().ToString();
         playerTransform = GameObject.Find("Player").transform;
         player = playerTransform.GetComponent<Player>();
+        playerHeightOffset = playerTransform.GetComponent<Collider2D>().bounds.min.y - playerTransform.position.y;
         rb = GetComponent<Rigidbody2D>();
         arrowSticking = FindFirstObjectByType<ArrowSticking>();
         StartHitpoints = hitpoints;
@@ -226,7 +229,7 @@ public abstract class EnemyAI : MonoBehaviour
         StartCoroutine(EnableMovement(0.5f));
     }
 
-    private IEnumerator EnableMovement(float seconds)
+    protected IEnumerator EnableMovement(float seconds)
     {
         yield return new WaitForSeconds(seconds);
         enableMovement = true;
@@ -251,8 +254,8 @@ public abstract class EnemyAI : MonoBehaviour
         }
     }
 
-    protected Vector2 GetTargetPosition()
+    protected virtual Vector2 GetTargetPosition()
     {
-        return playerTransform.position;
+        return new Vector2(playerTransform.position.x, playerTransform.position.y + playerHeightOffset);
     }
 }

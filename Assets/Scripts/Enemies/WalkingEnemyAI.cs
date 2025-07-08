@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -186,12 +188,19 @@ public class WalkingEnemyAI : EnemyAI
             {
                 rb.MovePosition(target);
                 pathIndex++;
+                movedDistance += Vector2.Distance(rb.position, previousPosition);
             }
             else
             {
                 rb.MovePosition(currentPosition + direction * distanceThisFrame);
+                var currentDistance = Vector2.Distance(rb.position, previousPosition);
+                if (currentDistance < 0.0001f)
+                {
+                    enableMovement = false;
+                    StartCoroutine(EnableMovementWhenGrounded());
+                }
+                movedDistance += currentDistance;
             }
-            movedDistance += Vector2.Distance(rb.position, previousPosition);
             previousPosition = rb.position;
             if (movedDistance >= MoveDistanceWalkSound && IsGrounded() && moveSound != null)
             {
@@ -208,6 +217,12 @@ public class WalkingEnemyAI : EnemyAI
             Debug.DrawLine(from, to, Color.cyan, Time.fixedDeltaTime);
         }
 #endif
+    }
+
+    protected IEnumerator EnableMovementWhenGrounded()
+    {
+        yield return new WaitUntil(IsGrounded);
+        enableMovement = true;
     }
 
     protected override void TryRotateSprite() {}

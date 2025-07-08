@@ -61,6 +61,8 @@ public class FlyingEnemyAI : EnemyAI
         base.Update();
     }
 
+    protected override void TryRotateSprite() { }
+
     void FixedUpdate()
     {
         if (!isAlive)
@@ -76,6 +78,15 @@ public class FlyingEnemyAI : EnemyAI
             Vector2 target = currentPath[pathIndex];
             Vector2 currentPosition = rb.position;
             Vector2 direction = (target - currentPosition).normalized;
+
+            if (direction.x < 0f && isFacingRight)
+            {
+                RotateSprite();
+            }
+            else if (direction.x > 0f && !isFacingRight)
+            {
+                RotateSprite();
+            }
 
             float distanceThisFrame = speed * Time.fixedDeltaTime;
             float distanceToTarget = Vector2.Distance(currentPosition, target);
@@ -147,6 +158,10 @@ public class FlyingEnemyAI : EnemyAI
             adjustedPath.Add(point);
         }
         return adjustedPath;
+    }
+    protected override Vector2 GetTargetPosition()
+    {
+        return playerTransform.position;
     }
 }
  
